@@ -11,6 +11,25 @@ var colors = [{ strong: "rgb(0, 200, 250)", weak: "rgb(0, 120, 150)" },
 $(function () {
 	var stage = new createjs.Stage("stage");
 	stage.enableMouseOver();
+	
+	function getButton(msg, color) {
+		var button = new Button();
+		button.text = msg;
+		button.fontFamily = 'Meiryo UI';
+		button.fontSize = 20;
+		button.padding = { left : 10, right : 10, bottom: 10, top: 10 };
+		button.foreground = color.strong;
+		button.background = color.weak;
+		return button;
+	}
+
+	// Sound Modal
+	var soundModal = new StackPanel();
+	soundModal.childSpacing = 10;
+	soundModal.addChild(getButton('アラーム音を設定する', colors[1]));
+	soundModal.addChild(getButton('アラーム音を削除する', colors[0]));
+	stage.addChild(soundModal);
+	
 
 	// Speaker
 	var speaker = new canvasicon.createjs.Speaker();
@@ -121,6 +140,7 @@ $(function () {
 	stage.addChild(selector);
 
 	createjs.Ticker.addEventListener("tick", function (event) {
+		soundModal.update();
 		selector.update();
 		circles.update();
 		stage.update();

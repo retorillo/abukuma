@@ -1,3 +1,7 @@
+# Vim's swap file
+*.swp
+*.swo
+
 # Windows image file caches
 Thumbs.db
 ehthumbs.db

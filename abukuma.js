@@ -1,15 +1,5 @@
-// Abukuma.js Copyright (C) Retorillo
-// Dependencies: create.js, moment.js
-var __class = __class || function (constructor, superClass) {
-	var newClass = function () {
-		if (superClass) superClass.apply(this, arguments);
-		constructor.apply(this, arguments);
-	}
-	if (superClass)
-		newClass.prototype = Object.create(superClass.prototype);
-	return newClass;
-}
-// Class Definitions
+/* Abukuma.js Copyright (C) Retorillo
+   Dependencies: classdef.js, create.js, moment.js */
 var Rect = __class(function (x, y, w, h) {
 	var _self = this;
 	_self.x = x != undefined ? x : 0;
@@ -500,8 +490,6 @@ var CountdownCircle = __class(function (x, y, w, h, strongColor, weakColor) {
 	}
 	_self.update = function () {
 		_countdown.update();
-		//var text_timeLeft = _countdown.completed ? ""
-		//	: Math.ceil(_countdown.timeLeft.asMinutes());
 		var text_timeLeft = Math.ceil(_countdown.timeLeft.asMinutes());
 		var text_endTime = _countdown.endTime.format("HH:mm");
 		_base.update(_countdown.timeLeftRate * 360,
@@ -510,20 +498,6 @@ var CountdownCircle = __class(function (x, y, w, h, strongColor, weakColor) {
 			_countdown.completed, _countdown.oddSecond);
 	}
 }, ProgressCircle);
-//var OperationCountdownCircle = __class(function (x, y, w, h, strongColor, weakColor) {
-//	var _self = this;
-//	var _operation = null;
-//	_self.restartCustom = function(op, startTime) {
-//	
-//	
-//	_self.restartOperation = function (op, startTime) {
-//		_operation = op;
-//		_self.restart(op.name, moment.duration(op.duration, "m", startTime));
-//	}
-//	Object.defineProperty(this, "operation", {
-//		get: function () { return _operation; }
-//	});
-//}, CountdownCircle);
 var TextInCircle = __class(function (offsetDeg, showTestCircle) {
 	// Private Members
 	var _self = this;
@@ -606,6 +580,118 @@ var MomentCountdown = __class(function () {
 
 	_self.reset(_zeroLeft);
 });
+var Button = __class(function() {
+	var _self = this;
+	var _shape = new createjs.Shape();
+	var _text = new createjs.Text();
+	var _invalidLayout = false;
+
+	_self.addChild(_shape);
+	_self.addChild(_text);
+	  	
+	_self.updateLayout = function(){
+		if (!_invalidLayout) return;
+		_invalidLayout = false;	
+		_text.text = _self.text;
+		_text.font = [Math.round(_self.fontSize), "px '" , _self.fontFamily, "'"].join('');
+		_text.textBaseline = "middle";
+		_text.textAlign = "center";
+		var mw = _text.getMeasuredWidth(), mh = _text.getMeasuredHeight();
+		_self.width = mw + _self.padding.left + _self.padding.right;
+		_self.height = mh + _self.padding.top + _self.padding.bottom;
+		_text.x = _self.width / 2;
+		_text.y = _self.height / 2;
+	};
+	_self.invalidateLayout = function() {
+		_invalidLayout = true;
+	};
+
+	__props(_self, [
+		{ prop: 'width', beforeget: _self.updateLayout  }, 
+		{ prop: 'height', beforeget: _self.updateLayout }, 
+		{ prop: 'foreground' },
+		{ prop: 'background' },
+		{ 
+			prop: 'padding',
+			afterset: _self.invalidateLayout, 
+			value: { left: 0, right: 0, top: 0, bottom: 0 }
+		}, 
+		{ prop: 'fontFamily', afterset: _self.invalidateLayout, },
+		{ prop: 'fontSize', afterset: _self.invalidateLayout, },
+		{ prop: 'text', afterset: _self.invalidateLayout }
+	]);
+
+	_self.update = function () {
+		_self.updateLayout();
+		_text.color = _self.foreground;
+		_shape.graphics.clear()
+			.beginFill(_self.background)
+			.drawRect(0, 0, _self.width, _self.height);
+	}
+}, MouseAwareContainer);
+
+var StackPanel = __class(function(){
+	var _self = this;
+	var _base = {};
+	var _algn = 0; 
+	var _vert = false;
+	['addChild', 'removeChild', 'swapChild'].forEach(function(method){
+		_base[method] = _self[method];
+		_self[method] = function() {
+			_base[method].apply(_self, arguments);	
+			_self.updateLayout();
+		}
+	});
+
+	__props(this, [
+		{ prop: 'childSpacing', value: 0 },
+		{ prop: 'childAlignment',
+			get: function() {
+				return _algn != 0 ? (_algn < 0 ? 'near' : 'far') : 'center';
+			},
+			set: function(value) {
+				_algn = /^c/i.test(value) ? 0 : (/^n/i.test(value) ? -1 : 1);
+				this.updateLayout();
+			}
+		},
+		{ prop: 'orientation',
+			get: function() {
+				return _vert ? "vertical" : "horizontal";
+			},
+			set: function(value) {
+				_vert = /^v/i.test(value);
+				this.updateLayout();
+			}
+		}
+	]);
+	
+	this.updateLayout = function () {
+		var tw = 0;
+		var mh = 0;
+		var nx = _vert ? 'y' : 'x';
+		var ny = _vert ? 'x' : 'y';
+		var nw = _vert ? 'height' : 'width';
+		var nh = _vert ? 'width' : 'height';
+		this.children.forEach(function(child) {
+			mh = Math.max(mh, child[nh]);
+		});
+		this.children.forEach(function(child, index){
+			if (index > 0) {
+				tw += _self.childSpacing;
+			}
+			var dh = mh - child[nh];
+			child[nx] = tw;
+			child[ny] = _algn == 0 ? dh / 2 : (_algn < 0 ? dh : 0);
+			tw += child[nw];
+		});
+		this[nw] = tw;
+		this[nh] = mh;
+	}
+
+	this.update = function () {
+		this.children.forEach(function(c) { c.update(); });
+	}
+}, createjs.Container);
 // Utilities
 function padLeft(val, length) {
 	return length >= val.toString().length ? (function (c, l) {
