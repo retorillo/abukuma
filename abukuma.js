@@ -635,6 +635,10 @@ var StackPanel = __class(function(){
 	var _base = {};
 	var _algn = 0; 
 	var _vert = false;
+	var _bkg  = new createjs.Shape();
+	this.addChild(_bkg);
+	var _skip = this.children.length;
+
 	['addChild', 'removeChild', 'swapChild'].forEach(function(method){
 		_base[method] = _self[method];
 		_self[method] = function() {
@@ -644,6 +648,8 @@ var StackPanel = __class(function(){
 	});
 
 	__props(this, [
+		{ prop: 'background' },
+		{ prop: 'padding', value: 10 },
 		{ prop: 'childSpacing', value: 0 },
 		{ prop: 'childAlignment',
 			get: function() {
@@ -666,30 +672,35 @@ var StackPanel = __class(function(){
 	]);
 	
 	this.updateLayout = function () {
-		var tw = 0;
+		var tw = _self.padding;
 		var mh = 0;
 		var nx = _vert ? 'y' : 'x';
 		var ny = _vert ? 'x' : 'y';
 		var nw = _vert ? 'height' : 'width';
 		var nh = _vert ? 'width' : 'height';
-		this.children.forEach(function(child) {
+		this.children.forEach(function(child, index) {
+			if (index < _skip) return; 
 			mh = Math.max(mh, child[nh]);
 		});
 		this.children.forEach(function(child, index){
-			if (index > 0) {
+			if (index < _skip) return;
+			if (index > _skip) {
 				tw += _self.childSpacing;
 			}
-			var dh = mh - child[nh];
+			var dh = mh - child[nh]; 
 			child[nx] = tw;
-			child[ny] = _algn == 0 ? dh / 2 : (_algn < 0 ? dh : 0);
+			child[ny] = _algn == 0 ? (dh / 2 + _self.padding) : (_algn < 0 ? dh : 0);
 			tw += child[nw];
 		});
-		this[nw] = tw;
-		this[nh] = mh;
+		this[nw] = tw + _self.padding;
+		this[nh] = mh + _self.padding * 2;
+		_bkg.graphics.c();
+		if (this.background)
+			_bkg.graphics.f(this.background).dr(0, 0, !_vert ? this[nw] : this[nh], !_vert ? this[nh] : this[nw]);
 	}
 
 	this.update = function () {
-		this.children.forEach(function(c) { c.update(); });
+		this.children.forEach(function(c) { if (c.update) c.update(); });
 	}
 }, createjs.Container);
 // Utilities

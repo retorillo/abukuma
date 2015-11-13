@@ -24,10 +24,34 @@ $(function () {
 	}
 
 	// Sound Modal
-	var soundModal = new StackPanel();
-	soundModal.childSpacing = 10;
-	soundModal.addChild(getButton('アラーム音を設定する', colors[1]));
-	soundModal.addChild(getButton('アラーム音を削除する', colors[0]));
+	function getSoundModal() {
+		
+		var soundModal = new StackPanel();
+		soundModal.background = 'red';
+		soundModal.orientation = 'v';
+		soundModal.childArrangement = 'n';
+		soundModal.childSpacing = 40;
+		var title = new createjs.Text();
+		title.text = 'アラーム音は設定されていません';
+		title.color = 'white';
+		title.font = '20px Meiryo UI';
+		title.width = title.getMeasuredWidth();
+		title.height = title.getMeasuredHeight();
+		soundModal.addChild(title);
+
+		var btnpanel = new StackPanel();
+		btnpanel.orientation = 'h';
+		btnpanel.background = 'blue';
+		btnpanel.childSpacing = 10;
+		btnpanel.addChild(getButton('アラーム音を設定する', colors[1]));
+		btnpanel.addChild(getButton('アラーム音を削除する', colors[0]));
+		btnpanel.updateLayout();
+
+		soundModal.addChild(btnpanel)
+
+		return soundModal;
+	}
+	var soundModal = getSoundModal();
 	stage.addChild(soundModal);
 	
 
