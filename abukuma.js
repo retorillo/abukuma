@@ -1,5 +1,6 @@
 /* Abukuma.js Copyright (C) Retorillo
    Dependencies: classdef.js, create.js, moment.js */
+//TODO: replaced by createjs.Rectangle
 var Rect = __class(function (x, y, w, h) {
 	var _self = this;
 	_self.x = x != undefined ? x : 0;
@@ -15,6 +16,7 @@ var Rect = __class(function (x, y, w, h) {
 		return new Rect(_self.x, _self.y, _self.w, _self.h);
 	}
 });
+//TODO: replaced by iro.Color
 var Color = __class(function (color) {
 	var _self = this;
 	var m = /^rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$|^#?([\da-f]{6})$/i.exec(color);
@@ -584,14 +586,28 @@ var Button = __class(function() {
 	var _self = this;
 	var _shape = new createjs.Shape();
 	var _text = new createjs.Text();
-	var _invalidLayout = false;
-
+	var _invalidated = true;
 	_self.addChild(_shape);
 	_self.addChild(_text);
 	  	
-	_self.updateLayout = function(){
-		if (!_invalidLayout) return;
-		_invalidLayout = false;	
+	_self.invalidate = function() {
+		_invalidated = true;
+	};
+
+	__props(_self, [
+		{ prop: 'width', beforeget: _self.update  }, 
+		{ prop: 'height', beforeget: _self.update }, 
+		{ prop: 'foreground', afterset: _self.invalidate },
+		{ prop: 'background', afterset: _self.invalidate },
+		{ prop: 'padding', afterset: _self.invalidate, value: { left: 0, right: 0, top: 0, bottom: 0 } }, 
+		{ prop: 'fontFamily', afterset: _self.invalidate, },
+		{ prop: 'fontSize', afterset: _self.invalidate, },
+		{ prop: 'text', afterset: _self.invalidate }
+	]);
+
+	_self.update = function () {
+		if (!_invalidated) return;
+		_invalidated = false;	
 		_text.text = _self.text;
 		_text.font = [Math.round(_self.fontSize), "px '" , _self.fontFamily, "'"].join('');
 		_text.textBaseline = "middle";
@@ -601,63 +617,45 @@ var Button = __class(function() {
 		_self.height = mh + _self.padding.top + _self.padding.bottom;
 		_text.x = _self.width / 2;
 		_text.y = _self.height / 2;
-	};
-	_self.invalidateLayout = function() {
-		_invalidLayout = true;
-	};
-
-	__props(_self, [
-		{ prop: 'width', beforeget: _self.updateLayout  }, 
-		{ prop: 'height', beforeget: _self.updateLayout }, 
-		{ prop: 'foreground' },
-		{ prop: 'background' },
-		{ 
-			prop: 'padding',
-			afterset: _self.invalidateLayout, 
-			value: { left: 0, right: 0, top: 0, bottom: 0 }
-		}, 
-		{ prop: 'fontFamily', afterset: _self.invalidateLayout, },
-		{ prop: 'fontSize', afterset: _self.invalidateLayout, },
-		{ prop: 'text', afterset: _self.invalidateLayout }
-	]);
-
-	_self.update = function () {
-		_self.updateLayout();
 		_text.color = _self.foreground;
 		_shape.graphics.clear()
 			.beginFill(_self.background)
 			.drawRect(0, 0, _self.width, _self.height);
 	}
 }, MouseAwareContainer);
-
 var StackPanel = __class(function(){
 	var _self = this;
 	var _base = {};
 	var _algn = 0; 
 	var _vert = false;
 	var _bkg  = new createjs.Shape();
-	this.addChild(_bkg);
-	var _skip = this.children.length;
+	_self.addChild(_bkg);
+	var _invalidated = true;
+	var _skip = _self.children.length;
+
+	_self.invalidate = function (){
+		_invalidated = true;
+	};
 
 	['addChild', 'removeChild', 'swapChild'].forEach(function(method){
 		_base[method] = _self[method];
 		_self[method] = function() {
 			_base[method].apply(_self, arguments);	
-			_self.updateLayout();
+			_self.invalidate();
 		}
 	});
 
-	__props(this, [
-		{ prop: 'background' },
-		{ prop: 'padding', value: 10 },
-		{ prop: 'childSpacing', value: 0 },
+	__props(_self, [
+		{ prop: 'background', afterset: _self.invalidate },
+		{ prop: 'padding', value: 10, afterset: _self.invalidate },
+		{ prop: 'childSpacing', value: 0, afterset: _self.invalidate },
 		{ prop: 'childAlignment',
 			get: function() {
 				return _algn != 0 ? (_algn < 0 ? 'near' : 'far') : 'center';
 			},
 			set: function(value) {
 				_algn = /^c/i.test(value) ? 0 : (/^n/i.test(value) ? -1 : 1);
-				this.updateLayout();
+				_self.invalidate();
 			}
 		},
 		{ prop: 'orientation',
@@ -666,23 +664,26 @@ var StackPanel = __class(function(){
 			},
 			set: function(value) {
 				_vert = /^v/i.test(value);
-				this.updateLayout();
+				_self.invalidate();
 			}
 		}
 	]);
 	
-	this.updateLayout = function () {
+	_self.update = function () {
+		_self.children.forEach(function(c) { if (c.update) c.update(); });
+		if (!_invalidated) return;
+		_invalidated = false;
 		var tw = _self.padding;
 		var mh = 0;
 		var nx = _vert ? 'y' : 'x';
 		var ny = _vert ? 'x' : 'y';
 		var nw = _vert ? 'height' : 'width';
 		var nh = _vert ? 'width' : 'height';
-		this.children.forEach(function(child, index) {
+		_self.children.forEach(function(child, index) {
 			if (index < _skip) return; 
 			mh = Math.max(mh, child[nh]);
 		});
-		this.children.forEach(function(child, index){
+		_self.children.forEach(function(child, index){
 			if (index < _skip) return;
 			if (index > _skip) {
 				tw += _self.childSpacing;
@@ -692,16 +693,72 @@ var StackPanel = __class(function(){
 			child[ny] = _algn == 0 ? (dh / 2 + _self.padding) : (_algn < 0 ? dh : 0);
 			tw += child[nw];
 		});
-		this[nw] = tw + _self.padding;
-		this[nh] = mh + _self.padding * 2;
+		_self[nw] = tw + _self.padding;
+		_self[nh] = mh + _self.padding * 2;
 		_bkg.graphics.c();
-		if (this.background)
-			_bkg.graphics.f(this.background).dr(0, 0, !_vert ? this[nw] : this[nh], !_vert ? this[nh] : this[nw]);
+		if (_self.background)
+			_bkg.graphics.f(_self.background).dr(0, 0, !_vert ? _self[nw] : _self[nh], !_vert ? _self[nh] : _self[nw]);
 	}
-
-	this.update = function () {
-		this.children.forEach(function(c) { if (c.update) c.update(); });
+}, createjs.Container);
+var SoundModal = __class(function () {
+	var _self = this;
+	var _outerPanel;
+	var _message;
+	var _btnPanel;
+	var _invalidated = true;
+	function getButton(msg, color) {
+		var button = new Button();
+		button.text = msg;
+		button.fontFamily = 'Meiryo UI';
+		button.fontSize = 20;
+		button.padding = { left : 10, right : 10, bottom: 10, top: 10 };
+		button.foreground = color.strong;
+		button.background = color.weak;
+		button.update();
+		return button;
 	}
+	_self.invalidate = function () {
+		_invalidated = true;
+	}
+	__props(_self, [
+		{ prop: 'width', get: function() { _self.update(); return _outerPanel.width } },
+		{ prop: 'height', get: function() { _self.update(); return _outerPanel.height } },
+		{ prop: 'title', afterset: _self.invalidate },
+		{ prop: 'background', value: 'white', afterset: _self.invalidate },
+		{ prop: 'foreground', value: 'dimgray', afterset: _self.invalidate },
+		{ prop: 'message', value: 'アラーム音は設定されていません', afterset: _self.invalidate },
+		{ prop: 'messageFontSize', value: 20, afterset: _self.invalidate },
+		{ prop: 'messageFontFamily', value: 'Meiryo UI', afterset: _self.invalidate },
+	]);
+	_self.init = function() {
+		_btnPanel = new StackPanel();
+		_message = new createjs.Text();
+		_outerPanel = new StackPanel();
+		_outerPanel.addChild(_message);
+		_outerPanel.addChild(_btnPanel)
+		_outerPanel.orientation = 'v';
+		_outerPanel.childArrangement = 'n';
+		_outerPanel.childSpacing = 40;
+		_btnPanel.childSpacing = 10;
+		_btnPanel.orientation = 'h';
+		_btnPanel.addChild(getButton('アラーム音を設定する', colors[1]));
+		_btnPanel.addChild(getButton('アラーム音を削除する', colors[0]));
+		_self.addChild(_outerPanel);
+		_self.update();
+	}
+	_self.update = function (){
+		_outerPanel.update();
+		_btnPanel.update();
+		if (!_invalidated) return;
+		_invalidated = false;
+		_outerPanel.background = _self.background;
+		_message.text = _self.message;
+		_message.color = _self.foreground;
+		_message.font = [Math.round(_self.messageFontSize), 'px ', _self.messageFontFamily].join('');
+		_message.width = _message.getMeasuredWidth();
+		_message.height = _message.getMeasuredHeight();
+	}
+	_self.init();
 }, createjs.Container);
 // Utilities
 function padLeft(val, length) {

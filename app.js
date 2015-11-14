@@ -9,51 +9,41 @@ var colors = [{ strong: "rgb(0, 200, 250)", weak: "rgb(0, 120, 150)" },
 	      { strong: "rgb(250, 0, 200)", weak: "rgb(150, 0, 120)" }];
 
 $(function () {
+	var soundModal, circles, modalbg;
 	var stage = new createjs.Stage("stage");
 	stage.enableMouseOver();
-	
-	function getButton(msg, color) {
-		var button = new Button();
-		button.text = msg;
-		button.fontFamily = 'Meiryo UI';
-		button.fontSize = 20;
-		button.padding = { left : 10, right : 10, bottom: 10, top: 10 };
-		button.foreground = color.strong;
-		button.background = color.weak;
-		return button;
-	}
 
-	// Sound Modal
-	function getSoundModal() {
-		
-		var soundModal = new StackPanel();
-		soundModal.background = 'red';
-		soundModal.orientation = 'v';
-		soundModal.childArrangement = 'n';
-		soundModal.childSpacing = 40;
-		var title = new createjs.Text();
-		title.text = 'アラーム音は設定されていません';
-		title.color = 'white';
-		title.font = '20px Meiryo UI';
-		title.width = title.getMeasuredWidth();
-		title.height = title.getMeasuredHeight();
-		soundModal.addChild(title);
-
-		var btnpanel = new StackPanel();
-		btnpanel.orientation = 'h';
-		btnpanel.background = 'blue';
-		btnpanel.childSpacing = 10;
-		btnpanel.addChild(getButton('アラーム音を設定する', colors[1]));
-		btnpanel.addChild(getButton('アラーム音を削除する', colors[0]));
-		btnpanel.updateLayout();
-
-		soundModal.addChild(btnpanel)
-
-		return soundModal;
-	}
-	var soundModal = getSoundModal();
-	stage.addChild(soundModal);
-	
+	function promoteToModal(modal){
+		if (!modalbg) {
+			modalbg = new createjs.Shape();
+			modalbg.alpha = 0.5;
+			modalbg.visible = false;
+			modalbg.graphics.f("black").rect(0, 0, stage.canvas.width, stage.canvas.height);
+		}
+		modalbg.addEventListener("click", function () {
+			modal.hide();
+		});
+		modal.hide = function () {
+			if (circles) circles.disable(false);
+			modalbg.visible = false;
+			modal.visible = false;
+		}
+		modal.show = function (v) {
+			circles.disable(true);
+			modalbg.visible = true;
+			modal.visible = true;
+			createjs.Tween.get(modalbg, { override: true })
+				.to({ alpha: 0 }, 0)
+				.to({ alpha: modalbg.alpha }, 500, createjs.Ease.sineOut);
+			createjs.Tween.get(modal, { override: true })
+				.to({ alpha: 0 }, 0)
+				.to({ alpha: 1 }, 250, createjs.Ease.cubicOut);
+			createjs.Tween.get(modal)
+				.to( v ? { y: 0 } : { x: -modal.x } , 0)
+				.to( v ? { y: modal.y } : { x: modal.x } , 500, createjs.Ease.backOut);
+		}
+		modal.hide();
+	};
 
 	// Speaker
 	var speaker = new canvasicon.createjs.Speaker();
@@ -68,7 +58,8 @@ $(function () {
 	speaker.y = stage.canvas.height - speaker.height - speaker_margin;
 	speaker.cursor = "pointer";
 	speaker.addEventListener("click", function() {
-		$("#audio_selector").click();	
+		// $("#audio_selector").click();
+		soundModal.show();
 	});
 	stage.addChild(speaker);
 
@@ -100,32 +91,20 @@ $(function () {
 		}, timeout);
 	}
 	
-
-	// ModalBg
-	var modalbg = new createjs.Shape();
-	modalbg.alpha = 0.5;
-	modalbg.visible = false;
-	modalbg.graphics.f("black").rect(0, 0, stage.canvas.width, stage.canvas.height);
-	modalbg.addEventListener("click", function () {
-		circles.disable(false);
-		modalbg.visible = false;
-		selector.visible = false;
-	});
-
 	// Selector
 	var selector = new OperationSelector(0, 0);
 	selector.visible = false;
 	selector.itemclick(function (op) {
 		selector.target.restart(op.name, moment.duration(op.duration, "m"));
-		circles.disable(false);
-		modalbg.visible = false;
-		selector.visible = false;
+		selector.hide();
 	});
+
 	selector.x = selector.default_x = (stage.canvas.width - selector.width) / 2;
 	selector.y = selector.default_y = (stage.canvas.height - selector.height) / 2;
+	promoteToModal(selector);
 
 	// Circles
-	var circles = new Array();
+	circles = new Array();
 	circles.disable = function (value) {
 		circles.forEach(function (c) { c.disabled = value;  })
 	}
@@ -137,8 +116,7 @@ $(function () {
 			colors[index].strong, colors[index].weak);
 		stage.addChild(c);
 		
-		// TODO: set them when operation is stored at KeyValueStore,
-		//       otherwise set defaults
+		// TODO: set them when operation is stored at KeyValueStore, otherwise set defaults
 		
 		// WARNING: operations[index] is unavailable now. (some index will returns null)
 		// c.restartOperation(operations[index]);
@@ -146,15 +124,7 @@ $(function () {
 		c.click(function () {
 			// oncircleclick
 			selector.target = c;
-			circles.disable(true);
-			modalbg.visible = true;
-			selector.visible = true;
-			createjs.Tween.get(modalbg, { override: true })
-				.to({ alpha: 0 }, 0).to({ alpha: modalbg.alpha }, 500, createjs.Ease.sineOut);
-			createjs.Tween.get(selector, { override: true })
-				.to({ alpha: 0 }, 0).to({ alpha: 1 }, 250, createjs.Ease.cubicOut);
-			createjs.Tween.get(selector)
-				.to({ y: 0 }, 0).to({ y: selector.default_y }, 500, createjs.Ease.backOut);
+			selector.show(true);
 		});
 		circles.push(c);
 	});
@@ -162,6 +132,15 @@ $(function () {
 	// ModalBg and Selector must be placed after circles
 	stage.addChild(modalbg);
 	stage.addChild(selector);
+	
+	// TODO: SoundModal requires button click event and button effects
+	soundModal = new SoundModal();
+	stage.addChild(soundModal);
+	soundModal.x = (stage.canvas.width - soundModal.width) / 2;
+	soundModal.y = (stage.canvas.height - soundModal.height) / 2;
+	promoteToModal(soundModal)
+
+	soundModal.show();
 
 	createjs.Ticker.addEventListener("tick", function (event) {
 		soundModal.update();
