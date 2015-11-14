@@ -16,79 +16,6 @@ var Rect = __class(function (x, y, w, h) {
 		return new Rect(_self.x, _self.y, _self.w, _self.h);
 	}
 });
-//TODO: replaced by iro.Color
-var Color = __class(function (color) {
-	var _self = this;
-	var m = /^rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$|^#?([\da-f]{6})$/i.exec(color);
-	_self.r = (m[4] ? parseInt(m[4].substr(0, 2), 16) : parseInt(m[1])) / 255;
-	_self.g = (m[4] ? parseInt(m[4].substr(2, 2), 16) : parseInt(m[2])) / 255;
-	_self.b = (m[4] ? parseInt(m[4].substr(4, 2), 16) : parseInt(m[3])) / 255;
-	_self.clone = function() {
-		return new Color(_self.toString());
-	}
-	_self.fluoresce = function () {
-		hsv_setter(_self.h + (_self.h > 180 ? -5 : 5), _self.s + 0.2, _self.v + 0.2);
-		return this;
-	}
-	_self.toString = function (hsv) {
-		return hsv ? ["hsv(", [_self.h.toFixed(1), _self.s.toFixed(1), _self.v.toFixed(1)].join(", ") , ")"].join("") : ["rgb(", [Math.round(_self.r * 255), Math.round(_self.g * 255), Math.round(_self.b * 255)].join(", ") , ")"].join("");
-	}
-	function hsv_setter(h, s, v) {
-
-		h = h % 360;
-		s = Math.min(Math.max(s, 0), 1.0);
-		v = Math.min(Math.max(v, 0), 1.0);
-
-		var c = s;
-		var h2 = h ? h / 60 : undefined;
-		var x = h ? c * (1 - Math.abs(h2 % 2 - 1)) : undefined;
-		var rgb1 = [v - c, v - c, v - c];
-		var rgb2 = null;
-		if (!h2) rgb2 = [0, 0, 0];
-		else if (0 <= h2 && h2 < 1) rgb2 = [c, x, 0];
-		else if (1 <= h2 && h2 < 2) rgb2 = [x, c, 0];
-		else if (2 <= h2 && h2 < 3) rgb2 = [0, c, x];
-		else if (3 <= h2 && h2 < 4) rgb2 = [0, x, c];
-		else if (4 <= h2 && h2 < 5) rgb2 = [x, 0, c];
-		else rgb2 = [c, 0, x];
-		_self.r = rgb1[0] + rgb2[0];
-		_self.g = rgb1[1] + rgb2[1];
-		_self.b = rgb1[2] + rgb2[2];
-	}
-	Object.defineProperty(this, "v", {
-		get: function () {
-			return Math.max(_self.r, _self.g, _self.b);
-		},
-		set: function (value) {
-			hsv_setter(_self.h, _self.s, value);
-		}
-	});
-	Object.defineProperty(this, "s", {
-		get: function () {
-			return (Math.max(_self.r, _self.g, _self.b) - Math.min(_self.r, _self.g, _self.b));
-		},
-		set: function (value) {
-			hsv_setter(_self.h, value, _self.v);
-		}
-	});
-	Object.defineProperty(this, "h", {
-		get: function () {
-			var r = _self.r;
-			var g = _self.g;
-			var b = _self.b;
-			var max = Math.max(r, g, b);
-			var min = Math.min(r, g, b);
-			if (min == max) return undefined;
-			else if (min == b) return 60 * ((g - r) / (max - min)) + 60;
-			else if (min == r) return 60 * ((b - g) / (max - min)) + 180;
-			else // min == g
-				return 60 * ((r - b) / (max - min)) + 300;
-		},
-		set: function (value) {
-			hsv_setter(value, _self.s, _self.v);
-		}
-	});
-});
 var MouseEventListener = __class(function (displayObject) {
 	var _self = this;
 	var _disabled = false;
@@ -335,85 +262,91 @@ var OperationButton = __class(function (x, y, w, h, operation) {
 	}
 	_self.initComponents();
 }, MouseAwareContainer);
-var ProgressCircle = __class(function (x, y, w, h, strongColor, weakColor) {
+var ProgressCircle = __class(function () {
 	if (!ProgressCircle.static) {
 		ProgressCircle.static = {};
 		ProgressCircle.static.instances = 0;
 	}
 	var _static = ProgressCircle.static;
 	_static.instances++;
-	// Private Members
 	var _self = this;
-	var _diameter;
-	var _radius;
-	var _centerX;
-	var _centerY;
-	var _strongColor;
-	var _strongColor_hover;
-	var _weakColor;
-	var _weakColor_hover;
-	var _drawCircle = function (graphics, center_x, center_y, radius, thickness, degree, foreground, background) {
-		graphics.setStrokeStyle(thickness)
+	var _invalidated = true;
+	var _alltext;
+	var _diameter, _radius;
+	var _centerX, _centerY;
+	var _strongColor, _strongColor_hover;
+	var _weakColor, _weakColor_hover;
+	var _drawCircle = function (graphics, center_x, center_y,
+		radius, _thickness, degree, foreground, background) {
+		graphics.setStrokeStyle(_thickness)
 			.beginStroke(background)
-			.arc(center_x, center_y, radius - thickness, 0, Math.PI * 2)
+			.arc(center_x, center_y, radius - _thickness, 0, Math.PI * 2)
 			.beginStroke(foreground)
-			.arc(center_x, center_y, radius - thickness,
+			.arc(center_x, center_y, radius - _thickness,
 				-Math.PI / 2, (degree / 360 - 0.25) * Math.PI * 2, false);
 	}
+	var _thickness;
+	var _marqueeRadius;
+	var _marqueeThickness;
+
 	// Constants
 	var thicknessRate = 4 / 15;
 	var marqueeRadiusRate = 3 / 5;
 	var marqueeThicknessRate = 1 / 15;
 	var fontsizeRate = 32 / 150;
-	var activityFontSizeRate = 0.7; //vs thickness
+	var activityFontSizeRate = 0.7; //vs _thickness
 	var activityPadding = 30; //as deg
-	var thickness = _radius * thicknessRate;
-	var marqueeRadius = _radius * marqueeRadiusRate;
-	var marqueeThickness = marqueeRadius * marqueeThicknessRate;
 
-	// Public Members
-	Object.defineProperty(this, "strongColor", {
-		set: function(color) {
-			_strongColor = color;
-			_strongColor_hover = new Color(color).fluoresce().toString();
+	_self.invalidate = function() { _invalidated = true; }
+	__props(_self, [
+		{ prop: 'width', value: 0, afterset: _self.invalidate },
+		{ prop: 'height', value: 0, afterset: _self.invalidate },
+		{ prop: 'strongColor', set: function(color) {
+				var c = new iro.Color(color)
+				_strongColor = c.css('hex');
+				_strongColor_hover = fluoresce(c).css('hex');
+				_self.invalidate();
+			},
 		},
-	});
-	_self.strongColor = strongColor;
-	Object.defineProperty(this, "weakColor", {
-		set: function(color) {
-			_weakColor = color;
-			_weakColor_hover = new Color(color).fluoresce().toString();
+		{ prop: 'weakColor', set: function(color) {
+				var c = new iro.Color(color)
+				_weakColor = c.css('hex');
+				_weakColor_hover = fluoresce(c).css('hex');
+				_self.invalidate();
+			},
 		},
-	});
-	_self.weakColor = weakColor;
-	_self.shape = new createjs.Shape();
-	_self.text_timeLeft = new createjs.Text();
-	_self.text_endTime = new createjs.Text();
-	_self.hitarea = new createjs.Shape();
-	_self.text_activity = new TextInCircle(activityPadding, false);
-	_self.init = function (x, y, w, h, strongColor, weakColor) {
-		_diameter = Math.min(w, h);
-		_radius = _diameter / 2;
-		_centerX = w / 2 + (w - _diameter) / 2;
-		_centerY = h / 2 + (h - _diameter) / 2;
+		{ prop: 'activity', set: function (value) {
+				return _self.text_activity.update(value, 
+					_centerX, _centerY, _radius - _thickness,
+					Math.round(_thickness * activityFontSizeRate), 
+					"Meiryo UI", activityPadding);
+			},
+		},
+		{ prop: 'fontFamily', value: 'Segoe UI Semilight', afterset: _self.invalidate },
+		// progress and marquee 0 - 360
+		// reveserd should be true 
+		// when Math..oor(marquee / 360) % 2 == 1
+		{ prop: 'progress', value: 0 },
+		{ prop: 'marquee', value: 0 },
+		{ prop: 'timeLeft', value: '' },
+		{ prop: 'endTime', value: '' },
+		{ prop: 'completed', value: false },
+		{ prop: 'reverse', value: false }, 
+	]);
 
-		thickness = _radius * thicknessRate;
-		marqueeRadius = _radius * marqueeRadiusRate;
-		marqueeThickness = marqueeRadius * marqueeThicknessRate;
-		
-		// init texts of the circle center
+	_self.init = function () {
+		_self.shape = new createjs.Shape();
+		_self.text_timeLeft = new createjs.Text();
+		_self.text_endTime = new createjs.Text();
+		_self.hitAreaShape = new createjs.Shape();
+		_self.text_activity = new TextInCircle(activityPadding, false);
 		var inDuration = 250;
 		var waitDuration = 3000;
 		var outDuration = 250;
-		var allTexts = [_self.text_timeLeft, _self.text_endTime];
 		var totalDuration = inDuration + waitDuration + outDuration;
 		var delay = totalDuration - 100 * _static.instances;
-		allTexts.forEach(function (text, index) {
-			text.font = Math.round(fontsizeRate * _diameter)
-			+ "px Segoe UI Semilight";
-			text.color = strongColor;
-			text.x = w / 2;
-			text.y = h / 2;
+		_alltext = [_self.text_timeLeft, _self.text_endTime];
+		_alltext.forEach(function (text, index) {
 			text.textAlign = "center";
 			text.textBaseline = "middle";
 			createjs.Tween.get(text, { loop: true })
@@ -422,68 +355,62 @@ var ProgressCircle = __class(function (x, y, w, h, strongColor, weakColor) {
 				.to({ scaleX: 1, scaleY: 1, alpha: 1 }, inDuration, createjs.Ease.elasticOut)
 				.wait(waitDuration)
 				.to({ scaleX: 0, scaleY: 0, alpha: 0 }, outDuration, createjs.Ease.cubicOut)
-				.wait((allTexts.length - 1 - index) * totalDuration)
+				.wait((_alltext.length - 1 - index) * totalDuration)
 				.setPosition(delay);
 		});
-
-		_self.hitarea.graphics.f("white").arc(_centerX, _centerY, _radius, 0, Math.PI * 2);
-
 		_self.cursor = "pointer";
-		_self.hitArea = _self.hitarea;
-
+		_self.hitArea = _self.hitAreaShape;
 		_self.addChild(_self.shape);
 		_self.addChild(_self.text_timeLeft);
 		_self.addChild(_self.text_endTime);
 		_self.addChild(_self.text_activity);
-
-		_self.x = x;
-		_self.y = y;
+		_self.update();
 	}
-
-	Object.defineProperty(this, "activity", {
-		set: function (value) {
-			return _self.text_activity.update(value, _centerX, _centerY, _radius - thickness,
-				Math.round(thickness * activityFontSizeRate), "Meiryo UI", activityPadding);
+	_self.update = function () {
+		if (_invalidated) {
+			_invalidated = false;
+			_diameter = Math.min(_self.width, _self.height);
+			_radius = _diameter / 2;
+			_centerX = _self.width / 2 + (_self.width - _diameter) / 2;
+			_centerY = _self.height / 2 + (_self.height - _diameter) / 2;
+			_thickness = _radius * thicknessRate;
+			_marqueeRadius = _radius * marqueeRadiusRate;
+			_marqueeThickness = _marqueeRadius * marqueeThicknessRate;
+			_self.hitAreaShape.graphics.f("white").arc(_centerX, _centerY, _radius, 0, Math.PI * 2);
+			_alltext.forEach(function (text) {
+				text.font = [Math.round(fontsizeRate * _diameter), "px ", _self.fontFamily].join('');
+				text.color = _strongColor;
+				text.x = _self.width / 2;
+				text.y = _self.height / 2;
+			});
 		}
-	});
-	// progress and marquee 0 - 360
-	// reveserd should be true 
-	// when Math..oor(marquee / 360) % 2 == 1
-	_self.update = function (progress, marquee, text_timeLeft, text_endTime, completed, reverse) {
+
 		var strongColor = _self.hover ? _strongColor_hover : _strongColor;
 		var weakColor = _self.hover ? _weakColor_hover : _weakColor;
-
 		_self.shape.graphics.clear();
-		_self.text_timeLeft.text = text_timeLeft;
+		_self.text_timeLeft.text = _self.timeLeft;
 		_self.text_timeLeft.color = strongColor;
-		_self.text_endTime.text = text_endTime;
+		_self.text_endTime.text = _self.endTime;
 		_self.text_endTime.color = strongColor;
-
 		_drawCircle(_self.shape.graphics, _centerX, _centerY,
-			_radius, thickness, progress, strongColor,
-			completed && reverse ? strongColor : weakColor);
+			_radius, _thickness, _self.progress, strongColor,
+			_self.completed && _self.reverse ? strongColor : weakColor);
 		_drawCircle(_self.shape.graphics, _centerX, _centerY,
-			marqueeRadius, marqueeThickness, marquee,
-			reverse ? strongColor : weakColor,
-			reverse ? weakColor : strongColor);
+			_marqueeRadius, _marqueeThickness, _self.marquee,
+			_self.reverse ? strongColor : weakColor,
+			_self.reverse ? weakColor : strongColor);
 	}
-
-	// Initialization
-	_self.init(x, y, w, h, strongColor, weakColor);
+	_self.init();
 }, MouseAwareContainer);
-var CountdownCircle = __class(function (x, y, w, h, strongColor, weakColor) {
+var CountdownCircle = __class(function () {
 	var _self = this;
 	var _countdown = new MomentCountdown(moment.duration(30, "m"));
-	// Base-Class References
 	var _base = {}
 	_base.update = _self.update;
-	Object.defineProperty(this, "startTime", {
-		get: function () { return _countdown.startTime; }
-	});
-	Object.defineProperty(this, "duration", {
-		get: function () { return _countdown.duration; }
-	});
-	// Public Members
+	__props(_self, [
+		{ prop: "startTime", get: function () { return _countdown.startTime; } },
+		{ prop: "duration", get: function () { return _countdown.duration; } }
+	]);
 	_self.restart = function (activity, duration, startTime) {
 		// duration must be moment.duration
 		// startTime must be moment, nullable
@@ -492,12 +419,13 @@ var CountdownCircle = __class(function (x, y, w, h, strongColor, weakColor) {
 	}
 	_self.update = function () {
 		_countdown.update();
-		var text_timeLeft = Math.ceil(_countdown.timeLeft.asMinutes());
-		var text_endTime = _countdown.endTime.format("HH:mm");
-		_base.update(_countdown.timeLeftRate * 360,
-			_countdown.secondRate * 360,
-			text_timeLeft, text_endTime,
-			_countdown.completed, _countdown.oddSecond);
+		this.progress = _countdown.timeLeftRate * 360,
+		this.marquee = _countdown.secondRate * 360,
+		this.timeLeft = Math.ceil(_countdown.timeLeft.asMinutes());
+		this.endTime = _countdown.endTime.format("HH:mm");
+		this.completed = _countdown.completed;
+		this.reverse = _countdown.oddSecond;
+		_base.update();
 	}
 }, ProgressCircle);
 var TextInCircle = __class(function (offsetDeg, showTestCircle) {
@@ -847,4 +775,7 @@ function zigzagSort(x, y, rects, padx, pady, oddbase) {
 			}
 		});
 	}
+}
+function fluoresce(c) {
+	return (c.h > 180 ? c.o('h', -5) : c.o('h', 5)).o('s', 20).o('l', 10);
 }

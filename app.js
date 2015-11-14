@@ -112,8 +112,9 @@ $(function () {
 		circles.forEach(function (c) { c.update(); })
 	}
 	rects.forEach(function (rect, index) {
-		var c = new CountdownCircle(rect.x, rect.y, rect.w, rect.h,
-			colors[index].strong, colors[index].weak);
+		var c = new CountdownCircle();
+		c.x = rect.x; c.y = rect.y; c.width = rect.w; c.height = rect.h;
+		c.strongColor = colors[index].strong; c.weakColor = colors[index].weak;
 		stage.addChild(c);
 		
 		// TODO: set them when operation is stored at KeyValueStore, otherwise set defaults
