@@ -18,74 +18,36 @@ var Rect = __class(function (x, y, w, h) {
 });
 var MouseEventListener = __class(function (displayObject) {
 	var _self = this;
-	var _disabled = false;
 	var _handler = null;
-	var _pressed = false;
-	var _hover = false;
-	Object.defineProperty(_self, "disabled", {
-		get: function () {
-			return _disabled;
-		},
-		set: function (value) {
-			_disabled = value;
-		}
-	});
-	Object.defineProperty(_self, "pressed", {
-		get: function () {
-			return _disabled ? false : _pressed;
-		}
-	});
-	Object.defineProperty(_self, "hover", {
-		get: function () {
-			return _disabled ? false : _hover;
-		}
-	});
+	var _pressed = false, _hover = false;
+	__props(_self, [
+		{ prop: 'disabled', value: false },
+		{ prop: 'pressed',  get: function() { return _self.disabled ? false : _pressed } },
+		{ prop: 'hover',    get: function() { return _self.disabled ? false : _hover   } } 
+	]);
 	_self.click = function (handler) {
 		if (_handler)
 			displayObject.removeEventListener("click", _handler);
-		// Wrap handler to prevent firing when disabled
-		_handler = handler ? function () { if (!_disabled) handler.apply(this, arguments); } : null;
+		// Wrapping handler for preventing firing when disabled
+		_handler = handler ? function () { if (!_self.disabled) handler.apply(this, arguments); } : null;
 		if (_handler)
 			displayObject.addEventListener("click", _handler);
 	}
 	// Shape Events
-	displayObject.addEventListener("mousedown", function () {
-		_pressed = true;
-	});
-	displayObject.addEventListener("pressup", function () {
-		_pressed = false;
-	});
-	displayObject.addEventListener("mouseover", function () {
-		_hover = true;
-	});
-	displayObject.addEventListener("mouseout", function () {
-		_hover = false;
-	});
+	displayObject.addEventListener("mousedown", function () { _pressed = true;  });
+	displayObject.addEventListener("pressup",   function () { _pressed = false; });
+	displayObject.addEventListener("mouseover", function () { _hover   = true;  });
+	displayObject.addEventListener("mouseout",  function () { _hover   = false; });
 });
 var MouseAwareContainer = __class(function () {
 	var _self = this;
 	var _mel = new MouseEventListener(this);
-	Object.defineProperty(_self, "pressed", {
-		get: function () {
-			return _mel.pressed;
-		}
-	});
-	Object.defineProperty(_self, "hover", {
-		get: function () {
-			return _mel.hover;
-		}
-	});
-	Object.defineProperty(_self, "disabled", {
-		get: function () {
-			return _mel.disabled;
-		},
-		set: function (value) {
-			_mel.disabled = value;
-		}
-	});
-	this.click = function (handler) {
-		return _mel.click(handler);
-	}
+	__props(this, [
+		{ prop: 'pressed',  get: function() { return _mel.pressed; } },
+		{ prop: 'hover',    get: function() { return _mel.hover;   } },
+		{ prop: 'disabled', get: function() { return _mel.disabled }, set: function(value) { _mel.disabled = value; } },
+	]);
+	this.click = function (handler) { return _mel.click(handler); }
 }, createjs.Container);
 var OperationSelector = __class(function(x, y, backColor) {
 	var _self = this;
