@@ -87,7 +87,12 @@ var OperationSelector = __class(function() {
 				var row = count % _max_rows;
 				var item_x = _cellspacing + (_item_width + _cellspacing) * col;
 				var item_y = _cellspacing + (_item_height + _cellspacing) * row;
-				var opb = new OperationButton(item_x, item_y, _item_width, _item_height, op);
+				var opb = new OperationButton();
+				opb.operation = op;
+				opb.x = item_x; 
+				opb.y = item_y;
+				opb.width = _item_width; 
+				opb.height = _item_height;
 				opb.click(function () { _self.itemclick(opb, [op, count]); });
 				_self.addChild(opb);
 				_width = Math.max(_width, item_x + _item_width + _cellspacing);
@@ -105,103 +110,22 @@ var OperationSelector = __class(function() {
 	}
 	_self.init();
 }, createjs.Container);
-var OperationButton = __class(function (x, y, w, h, operation) {
+var OperationButton = __class(function () {
 	var _self = this;
-	var strongColor = operation.area.strongColor;
-	var weakColor = operation.area.weakColor;
-
-	// Public Members
-	_self.hoverlight = new createjs.Shape();
-	_self.shape = new createjs.Shape();
-	_self.text_id = new createjs.Text();
-	_self.text_name = new createjs.Text();
-	_self.text_desc = new createjs.Text();
-	_self.shape_ship = new createjs.Shape();
-
-	_self.initComponents = function () {
-		// straight constant
-		var id_fontsize_rate = 0.6; // vs h
-		var name_fontsize_rate = 0.45; // vs h
-		var desc_fontsize_rate = 0.3; // vs h
-
-		// complexed constant
-		var id_region_rate = 2; // vs id_fontsize
-		var ships_region_rate = 1; // vs id_fontsize
-		var name_padleft_rate = 0.5; // vs name_fontsize
-
-		// computed
-		var id_fontsize = Math.round(id_fontsize_rate * h);
-		var ships_region_w = id_fontsize * ships_region_rate;
-		var ships_region = new Rect(w - ships_region_w, 0, ships_region_w, h);
-		var id_region = new Rect(0, 0, id_fontsize * id_region_rate, h);
-		var name_fontsize = Math.round(name_fontsize_rate * h);
-		var name_padleft = Math.round(name_padleft_rate * name_fontsize);
-		var desc_fontsize = Math.round(desc_fontsize_rate * h);
-
-		_self.x = x;
-		_self.y = y;
-
-		_self.shape.graphics.f(weakColor).rect(0, 0, w, h)
-			.f(strongColor).rect(id_region.x, id_region.y, id_region.w, id_region.h);
-
-		_self.hoverlight.alpha = 0;
-		_self.hoverlight.graphics.f("white").rect(0, 0, w, h);
-
-		_self.text_id.color = weakColor;
-		_self.text_id.x = id_region.w / 2 + id_region.x;
-		_self.text_id.y = id_region.h / 2 + id_region.y;
-		_self.text_id.textAlign = "center";
-		_self.text_id.textBaseline = "middle";
-		_self.text_id.text = format("{0:d2}", operation.id);
-		_self.text_id.font = id_fontsize + "px Segoe UI Semilight";
-
-		_self.text_name.color = strongColor;
-		_self.text_name.x = id_region.x + id_region.w + name_padleft;
-		_self.text_name.y = id_region.h / 4 + id_region.y;
-		_self.text_name.textAlign = "left";
-		_self.text_name.textBaseline = "middle";
-		_self.text_name.text = operation.name;
-		_self.text_name.font = name_fontsize + "px Meiryo UI";
-
-		var desc = new Array();
-		if (operation.fuel) desc.push(format("燃 {0:d}", operation.fuel));
-		if (operation.steel) desc.push(format("鋼 {0:d}", operation.steel));
-		if (operation.ammo) desc.push(format("弾 {0:d}", operation.ammo));
-		if (operation.baux) desc.push(format("ボ {0:d}", operation.baux));
-
-		_self.text_desc.color = strongColor;
-		_self.text_desc.x = id_region.x + id_region.w + name_padleft;
-		_self.text_desc.y = id_region.h * 3 / 4 + id_region.y;
-		_self.text_desc.textAlign = "left";
-		_self.text_desc.textBaseline = "middle";
-		_self.text_desc.text = desc.join(" ");
-		_self.text_desc.font = desc_fontsize + "px Meiryo UI";
-
-
-		//ships
-		_self.shape_ship.x = ships_region.x;
-		_self.shape_ship.y = ships_region.y;
-		var shiprect = makeGrid(new Rect(0, 0, ships_region.w, ships_region.h),
-			2, 3, 5);
-		if (operation.ships != undefined) {
-			var g = _self.shape_ship.graphics;
-			operation.ships.forEach(function (ship, index) {
-				if (ship == ships.lightCruiser)
-					g.f(strongColor);
-				else if (ship == ships.destroyer ||
-					ship == ships.unspecified)
-					g.s(strongColor);
-
-				var r = shiprect[index];
-				g.rect(r.x, r.y, r.w, r.h);
-
-				if (ship == ships.destroyer)
-					g.mt(r.x, r.y).lt(r.x + r.w, r.y + r.h);
-
-
-				g.ef().es();
-			});
-		}
+	var _invalidated = true;
+	_self.invalidate = function () { _invalidated = true; }
+	__props(_self, [
+		{ prop: 'width',     afterset: _self.invalidate },
+		{ prop: 'height',    afterset: _self.invalidate },
+		{ prop: 'operation', afterset: _self.invalidate },
+	]);
+	_self.init = function () {
+		_self.hoverlight = new createjs.Shape();
+		_self.shape = new createjs.Shape();
+		_self.text_id = new createjs.Text();
+		_self.text_name = new createjs.Text();
+		_self.text_desc = new createjs.Text();
+		_self.shape_ship = new createjs.Shape();
 		_self.hitArea = _self.shape;
 		_self.addChild(_self.shape);
 		_self.addChild(_self.text_id);
@@ -209,9 +133,92 @@ var OperationButton = __class(function (x, y, w, h, operation) {
 		_self.addChild(_self.text_desc);
 		_self.addChild(_self.shape_ship);
 		_self.addChild(_self.hoverlight);
+		_self.update();
 	}
-
 	_self.update = function () {
+		if (_invalidated && this.operation) {
+			_invalidated = false;
+
+			var op = this.operation;
+			var strongColor = op.area.strongColor;
+			var weakColor = op.area.weakColor;
+
+			// straight constant
+			var id_fontsize_rate = 0.6; // vs _self.height
+			var name_fontsize_rate = 0.45; // vs _self.height
+			var desc_fontsize_rate = 0.3; // vs _self.height
+
+			// complexed constant
+			var id_region_rate = 2; // vs id_fontsize
+			var ships_region_rate = 1; // vs id_fontsize
+			var name_padleft_rate = 0.5; // vs name_fontsize
+
+			// computed
+			var id_fontsize = Math.round(id_fontsize_rate * _self.height);
+			var ships_region_w = id_fontsize * ships_region_rate;
+			var ships_region = new Rect(_self.width - ships_region_w, 0, ships_region_w, _self.height);
+			var id_region = new Rect(0, 0, id_fontsize * id_region_rate, _self.height);
+			var name_fontsize = Math.round(name_fontsize_rate * _self.height);
+			var name_padleft = Math.round(name_padleft_rate * name_fontsize);
+			var desc_fontsize = Math.round(desc_fontsize_rate * _self.height);
+
+			_self.shape.graphics.f(weakColor).rect(0, 0, _self.width, _self.height)
+				.f(strongColor).rect(id_region.x, id_region.y, id_region.w, id_region.h);
+
+			_self.hoverlight.alpha = 0;
+			_self.hoverlight.graphics.f("white").rect(0, 0, _self.width, _self.height);
+
+			_self.text_id.color = weakColor;
+			_self.text_id.x = id_region.w / 2 + id_region.x;
+			_self.text_id.y = id_region.h / 2 + id_region.y;
+			_self.text_id.textAlign = "center";
+			_self.text_id.textBaseline = "middle";
+			_self.text_id.text = format("{0:d2}", op.id);
+			_self.text_id.font = id_fontsize + "px Segoe UI Semilight";
+
+			_self.text_name.color = strongColor;
+			_self.text_name.x = id_region.x + id_region.w + name_padleft;
+			_self.text_name.y = id_region.h / 4 + id_region.y;
+			_self.text_name.textAlign = "left";
+			_self.text_name.textBaseline = "middle";
+			_self.text_name.text = op.name;
+			_self.text_name.font = name_fontsize + "px Meiryo UI";
+
+			var desc = new Array();
+			if (op.fuel)  desc.push(format("燃 {0:d}", op.fuel));
+			if (op.steel) desc.push(format("鋼 {0:d}", op.steel));
+			if (op.ammo)  desc.push(format("弾 {0:d}", op.ammo));
+			if (op.baux)  desc.push(format("ボ {0:d}", op.baux));
+
+			_self.text_desc.color = strongColor;
+			_self.text_desc.x = id_region.x + id_region.w + name_padleft;
+			_self.text_desc.y = id_region.h * 3 / 4 + id_region.y;
+			_self.text_desc.textAlign = "left";
+			_self.text_desc.textBaseline = "middle";
+			_self.text_desc.text = desc.join(" ");
+			_self.text_desc.font = desc_fontsize + "px Meiryo UI";
+
+			//ships
+			_self.shape_ship.x = ships_region.x;
+			_self.shape_ship.y = ships_region.y;
+			var shiprect = makeGrid(new Rect(0, 0, ships_region.w, ships_region.h), 2, 3, 5);
+			if (op.ships != undefined) {
+				var g = _self.shape_ship.graphics;
+				op.ships.forEach(function (ship, index) {
+					if (ship == ships.lightCruiser)
+						g.f(strongColor);
+					else if (ship == ships.destroyer ||
+						ship == ships.unspecified)
+						g.s(strongColor);
+					var r = shiprect[index];
+					g.rect(r.x, r.y, r.w, r.h);
+					if (ship == ships.destroyer)
+						g.mt(r.x, r.y).lt(r.x + r.w, r.y + r.h);
+					g.ef().es();
+				});
+			}
+		}
+
 		if (_self.hover && _self.pressed)
 			this.hoverlight.alpha = 0.4;
 		else if (_self.hover)
@@ -219,7 +226,7 @@ var OperationButton = __class(function (x, y, w, h, operation) {
 		else
 			this.hoverlight.alpha = 0;
 	}
-	_self.initComponents();
+	_self.init();
 }, MouseAwareContainer);
 var ProgressCircle = __class(function () {
 	if (!ProgressCircle.static) {
