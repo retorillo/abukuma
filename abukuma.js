@@ -49,30 +49,22 @@ var MouseAwareContainer = __class(function () {
 	]);
 	this.click = function (handler) { return _mel.click(handler); }
 }, createjs.Container);
-var OperationSelector = __class(function(x, y, backColor) {
+var OperationSelector = __class(function() {
 	var _self = this;
-	// Constant
-	var item_width = 245;
-	var item_height = 40;
-	var cellspacing = 1;
-	var max_rows = 13;
-	var _width = 0;
-	var _height = 0;
-	var _itemclick = function (op, index) { console.log(op.name + " is click"); }
+	var _width = 0, _height = 0;
+	var _item_width = 245, _item_height = 40;
+	var _cellspacing = 1;
+	var _max_rows = 13;
+	var _itemclick = function (op, index) { }
+	var _invalidated = true;
+	_self.invalidate = function() { _invalidated = true; }
+	__props(_self, [
+		{ prop: 'background',  afterset: _self.invalidate },
+		{ prop: 'operations', afterset: _self.invalidate, value: operations },
+		{ prop: 'width',      get: function () { this.update(); return _width;  } },
+		{ prop: 'height',     get: function () { this.update(); return _height; } },
 
-	Object.defineProperty(this, "width", {
-		get: function () { return _width; }
-	});
-	Object.defineProperty(this, "height", {
-		get: function () { return _height; }
-	});
-	Object.defineProperty(this, "backColor", {
-		set: function (c) {
-			_self.shape.graphics.c().f(c || "black").rect(0, 0, _width, _height);
-		}
-	});
-	// Public Members
-	_self.shape = new createjs.Shape();
+	]);
 	_self.itemclick = function () {
 		if (arguments.length == 1 && typeof(arguments[0]) == "function")
 			_itemclick = arguments[0];
@@ -80,27 +72,32 @@ var OperationSelector = __class(function(x, y, backColor) {
 			_itemclick.apply(arguments[0], arguments[1]);
 	}
 	_self.init = function () {
-		_self.x = x;
-		_self.y = y;
+		_self.shape = new createjs.Shape();
 		_self.addChild(_self.shape);
-		_width = 0;
-		_height = 0;
-		var count = 0;
-		operations.forEach(function (op, index) {
-			var col = Math.floor(count / max_rows);
-			var row = count % max_rows;
-			var item_x = cellspacing + (item_width + cellspacing) * col;
-			var item_y = cellspacing + (item_height + cellspacing) * row;
-			var opb = new OperationButton(item_x, item_y, item_width, item_height, op);
-			opb.click(function () { _self.itemclick(opb, [op, count]); });
-			_self.addChild(opb);
-			_width = Math.max(_width, item_x + item_width + cellspacing);
-			_height = Math.max(_height, item_y + item_height + cellspacing);
-			_self.backColor = backColor;
-			count++;
-		});
+		_self.update();
 	}
 	_self.update = function () {
+		if (_invalidated) {
+			_invalidated = false;
+			_width = 0;
+			_height = 0;
+			var count = 0;
+			_self.operations.forEach(function (op, index) {
+				var col = Math.floor(count / _max_rows);
+				var row = count % _max_rows;
+				var item_x = _cellspacing + (_item_width + _cellspacing) * col;
+				var item_y = _cellspacing + (_item_height + _cellspacing) * row;
+				var opb = new OperationButton(item_x, item_y, _item_width, _item_height, op);
+				opb.click(function () { _self.itemclick(opb, [op, count]); });
+				_self.addChild(opb);
+				_width = Math.max(_width, item_x + _item_width + _cellspacing);
+				_height = Math.max(_height, item_y + _item_height + _cellspacing);
+				//TODO: opb.backgroud ?
+				// _self.background = background;
+				count++;
+			});
+			_self.shape.graphics.c().f(_self.background || "black").rect(0, 0, _width, _height);
+		}
 		_self.children.forEach(function (child) {
 			if (child.update)
 				child.update();

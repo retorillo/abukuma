@@ -92,13 +92,11 @@ $(function () {
 	}
 	
 	// Selector
-	var selector = new OperationSelector(0, 0);
-	selector.visible = false;
+	var selector = new OperationSelector();
 	selector.itemclick(function (op) {
 		selector.target.restart(op.name, moment.duration(op.duration, "m"));
 		selector.hide();
 	});
-
 	selector.x = selector.default_x = (stage.canvas.width - selector.width) / 2;
 	selector.y = selector.default_y = (stage.canvas.height - selector.height) / 2;
 	promoteToModal(selector);
