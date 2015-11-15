@@ -282,8 +282,8 @@ var ProgressCircle = __class(function () {
 	var marqueeRadiusRate = 3 / 5;
 	var marqueeThicknessRate = 1 / 15;
 	var fontsizeRate = 32 / 150;
-	var activityFontSizeRate = 0.7; //vs _thickness
-	var activityPadding = 30; //as deg
+	var activityFontSizeRate = 0.7; // vs _thickness
+	var activityCharSpacing = 30; // as deg
 
 	_self.invalidate = function() { _invalidated = true; }
 	__props(_self, [
@@ -302,13 +302,12 @@ var ProgressCircle = __class(function () {
 			},
 		},
 		{ prop: 'activity', set: function (value) {
-				return _self.text_activity.update(value, 
-					_centerX, _centerY, _radius - _thickness,
-					Math.round(_thickness * activityFontSizeRate), 
-					"Meiryo UI", activityPadding);
+				_self.text_activity.text = value;
+				_self.text_activity.update();
 			},
 		},
 		{ prop: 'fontFamily', value: 'Segoe UI Semilight', afterset: _self.invalidate },
+		{ prop: 'activityFontFamily', value: 'Meiryo UI', afterset: _self.invalidate },
 		// progress and marquee 0 - 360
 		// reveserd should be true 
 		// when Math..oor(marquee / 360) % 2 == 1
@@ -325,7 +324,9 @@ var ProgressCircle = __class(function () {
 		_self.text_timeLeft = new createjs.Text();
 		_self.text_endTime = new createjs.Text();
 		_self.hitAreaShape = new createjs.Shape();
-		_self.text_activity = new TextInCircle(activityPadding, false);
+		_self.text_activity = new TextInCircle();
+		_self.text_activity.offsetDeg = activityCharSpacing;
+
 		var inDuration = 250;
 		var waitDuration = 3000;
 		var outDuration = 250;
@@ -369,6 +370,14 @@ var ProgressCircle = __class(function () {
 				text.x = _self.width / 2;
 				text.y = _self.height / 2;
 			});
+
+			var act = _self.text_activity;
+			act.radius = _radius - _thickness;
+			act.x = _centerX - act.radius;
+			act.y = _centerY - act.radius;
+			act.fontSize = Math.round(_thickness * activityFontSizeRate);
+			act.fontFamily = _self.activityFontFamily;
+			act.charSpacing = activityCharSpacing;
 		}
 
 		var strongColor = _self.hover ? _strongColor_hover : _strongColor;
@@ -414,53 +423,56 @@ var CountdownCircle = __class(function () {
 		_base.update();
 	}
 }, ProgressCircle);
-var TextInCircle = __class(function (offsetDeg, showTestCircle) {
-	// Private Members
+var TextInCircle = __class(function () {
 	var _self = this;
-	// Public Members
-	_self.testCircle = new createjs.Shape();
-	_self.testCircle.visible = showTestCircle;
+	var _charList;
+	var _invalidated = true;
+	_self.invalidate = function() { _invalidated = true; }
 	_self.animationDistance = 1;
 	_self.animationDelay = 50;
 	_self.animationDuration = 1000; // Each
-	_self.update = function (text, center_x, center_y, radius, font_size, font_family, char_spacing) {
-		text = text || "";
-
-		if (!char_spacing)
-			char_spacing = 360 / text.length;
-
-		_self.testCircle.graphics
-		    .clear()
-		    .s("red")
-		    .arc(0, 0, radius, 0, Math.PI * 2);
-
-		_self.removeAllChildren();
-		_self.addChild(_self.testCircle);
-
+	__props(_self, [
+		{ prop: 'text',           value: '',    afterset: _self.invalidate },
+		{ prop: 'fontSize',       value: 0,     afterset: _self.invalidate },
+		{ prop: 'radius',         value: '',    afterset: _self.invalidate },
+		{ prop: 'offsetDeg',      value: 0,     afterset: _self.invalidate },
+		{ prop: 'showTestCircle', value: false, afterset: _self.invalidate },
+		{ prop: 'fontFamily',     value: false, afterset: _self.invalidate },
+		{ prop: 'charSpacing',    value: 0,     afterset: _self.invalidate },
+	]);
+	_self.init = function () {
+		_charList = new createjs.Container(); 
+		_self.addChild(_charList);
+		_self.update();
+	}
+	_self.update = function () {
+		if (!_invalidated) return;
+		_invalidated = false;
+		var text = _self.text || '';
+		_charList.removeAllChildren();
 		for (var c = 0; c < text.length; c++) {
 			var t = new createjs.Text();
 			t.text = text[c];
-			t.font = font_size + "px " + font_family;
+			t.font = [_self.fontSize, "px ", _self.fontFamily].join('');
 			t.textAlign = "center";
 			t.textBaseline = "middle";
-			t.regY = radius;
-			t.rotation = (c - _self.animationDistance)
-			    * char_spacing + offsetDeg;
+			t.regY = _self.radius;
+			t.rotation = (c - _self.animationDistance) * _self.charSpacing + _self.offsetDeg;
 			t.alpha = 0;
-
 			createjs.Tween.get(t)
 			   .wait(c * _self.animationDelay)
-			   .to({
-			   	rotation: c * char_spacing + offsetDeg,
-			   	alpha: 1
-			   }, _self.animationDuration,
-				  createjs.Ease.elasticOut);
-
-			_self.addChild(t);
+			   .to({ rotation: c * _self.charSpacing + _self.offsetDeg, alpha: 1 },
+				_self.animationDuration, createjs.Ease.elasticOut);
+			_charList.addChild(t);
 		}
-		_self.x = center_x;
-		_self.y = center_y;
+		// Now, _charList (x, y) represents center point of rotation.
+		// Offset by radius in order in order that its parent (x, y) represents left-top corner of entire object's bounds. 
+		_charList.x = _self.radius;
+		_charList.y = _self.radius;
+		if (!_self.charSpacing)
+			_self.charSpacing = 360 / text.length;
 	}
+	_self.init();
 }, createjs.Container);
 var MomentCountdown = __class(function () {
 	// Private Members
@@ -493,7 +505,6 @@ var MomentCountdown = __class(function () {
 		_self.oddSecond = Math.abs(_self.timeLeftRaw.seconds()) % 2 != 1;
 		_self.timeLeftRate = _self.timeLeft.asMilliseconds() / _self.duration.asMilliseconds();
 	}
-
 	_self.reset(_zeroLeft);
 });
 var Button = __class(function() {
