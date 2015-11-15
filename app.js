@@ -13,7 +13,7 @@ $(function () {
 	var stage = new createjs.Stage("stage");
 	stage.enableMouseOver();
 
-	function promoteToModal(modal){
+	function promoteToModal(modal, onhide){
 		if (!modalbg) {
 			modalbg = new createjs.Shape();
 			modalbg.alpha = 0.5;
@@ -27,6 +27,7 @@ $(function () {
 			if (circles) circles.disable(false);
 			modalbg.visible = false;
 			modal.visible = false;
+			if (onhide) onhide.apply(modal);
 		}
 		modal.show = function (v) {
 			circles.disable(true);
@@ -58,39 +59,10 @@ $(function () {
 	speaker.y = stage.canvas.height - speaker.height - speaker_margin;
 	speaker.cursor = "pointer";
 	speaker.addEventListener("click", function() {
-		// $("#audio_selector").click();
 		soundModal.show();
 	});
 	stage.addChild(speaker);
 
-	var audio;
-	var audioTimeout;
-	var audioDataURL;
-	$("#audio_selector").change(function(e1){
-		var reader = new FileReader();
-		// http://www.w3.org/TR/FileAPI/#dfn-load-event
-		reader.onload = function (e2) {
-			audioDataURL = e2.target.result;
-			speaker.volume = 100;
-			playAudio(3000);
-		}
-		reader.readAsDataURL(e1.target.files[0]);
-	});
-	var playAudio = function(timeout) {
-		if (audioTimeout)
-			clearTimeout(audioTimeout);
-		if (audio)
-			audio.remove();
-		audio = $('<audio>')
-			.attr('autoplay', 'autoplay')
-			.attr('src', audioDataURL)
-			.appendTo(document.body);
-		audioTimeout = setTimeout(function() {
-			audio.remove();
-			audio = null;
-		}, timeout);
-	}
-	
 	// Selector
 	var selector = new OperationSelector();
 	selector.itemclick(function (op) {
@@ -131,14 +103,19 @@ $(function () {
 	// ModalBg and Selector must be placed after circles
 	stage.addChild(modalbg);
 	stage.addChild(selector);
-	
-	// TODO: SoundModal requires button click event and button effects
+
+	// TODO: SoundModal window border
+	// TODO: SoundModal.hasDataURL property to check more precisely
+	// TODO: Button control border
+	// TODO: Speaker mouse hover effect
 	soundModal = new SoundModal();
 	stage.addChild(soundModal);
 	soundModal.x = (stage.canvas.width - soundModal.width) / 2;
 	soundModal.y = (stage.canvas.height - soundModal.height) / 2;
-	promoteToModal(soundModal)
-
+	soundModal.change(function(){
+		speaker.volume = soundModal.soundDataURL != null ? 100 : 0;
+	});
+	promoteToModal(soundModal, soundModal.stopTest)
 	soundModal.show();
 
 	createjs.Ticker.addEventListener("tick", function (event) {

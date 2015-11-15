@@ -509,44 +509,78 @@ var MomentCountdown = __class(function () {
 });
 var Button = __class(function() {
 	var _self = this;
-	var _shape = new createjs.Shape();
-	var _text = new createjs.Text();
+	// TODO: declare 'RectShape' that can change color more easily (?)
+	var _shape, _shape_hovered, _text;
+	var _foreground_hovered, _background_hovered;
 	var _invalidated = true;
-	_self.addChild(_shape);
-	_self.addChild(_text);
-	  	
-	_self.invalidate = function() {
-		_invalidated = true;
-	};
-
+	_self.invalidate = function() { _invalidated = true; };
 	__props(_self, [
-		{ prop: 'width', beforeget: _self.update  }, 
-		{ prop: 'height', beforeget: _self.update }, 
-		{ prop: 'foreground', afterset: _self.invalidate },
-		{ prop: 'background', afterset: _self.invalidate },
-		{ prop: 'padding', afterset: _self.invalidate, value: { left: 0, right: 0, top: 0, bottom: 0 } }, 
-		{ prop: 'fontFamily', afterset: _self.invalidate, },
-		{ prop: 'fontSize', afterset: _self.invalidate, },
-		{ prop: 'text', afterset: _self.invalidate }
+		{ prop: 'width',      beforeget: _self.update, }, 
+		{ prop: 'height',     beforeget: _self.update, }, 
+		{ prop: 'foreground', afterset:  _self.invalidate, },
+		{ prop: 'background', afterset:  _self.invalidate, },
+		{ prop: 'padding',    afterset:  _self.invalidate, value: { left: 0, right: 0, top: 0, bottom: 0 }, }, 
+		{ prop: 'fontFamily', afterset:  _self.invalidate, value: 'Meiryo UI' },
+		{ prop: 'fontSize',   afterset:  _self.invalidate, },
+		{ prop: 'text',       afterset:  _self.invalidate, },
 	]);
-
-	_self.update = function () {
-		if (!_invalidated) return;
-		_invalidated = false;	
-		_text.text = _self.text;
-		_text.font = [Math.round(_self.fontSize), "px '" , _self.fontFamily, "'"].join('');
-		_text.textBaseline = "middle";
-		_text.textAlign = "center";
-		var mw = _text.getMeasuredWidth(), mh = _text.getMeasuredHeight();
-		_self.width = mw + _self.padding.left + _self.padding.right;
-		_self.height = mh + _self.padding.top + _self.padding.bottom;
-		_text.x = _self.width / 2;
-		_text.y = _self.height / 2;
-		_text.color = _self.foreground;
-		_shape.graphics.clear()
-			.beginFill(_self.background)
-			.drawRect(0, 0, _self.width, _self.height);
+	_self.init = function () {
+		_shape = new createjs.Shape();
+		_shape_hovered = new createjs.Shape();
+		_text = new createjs.Text();
+		_self.hitArea = _shape;
+		_self.addChild(_shape);
+		_self.addChild(_shape_hovered);
+		_self.addChild(_text);
+		_self.update();
 	}
+	_self.update = function () {
+		if (_invalidated) {
+			_invalidated = false;	
+			_text.text = _self.text;
+			_text.font = [Math.round(_self.fontSize), "px '" , _self.fontFamily, "'"].join('');
+			_text.textBaseline = "middle";
+			_text.textAlign = "center";
+			var mw = _text.getMeasuredWidth(), mh = _text.getMeasuredHeight();
+			_self.width = mw + _self.padding.left + _self.padding.right;
+			_self.height = mh + _self.padding.top + _self.padding.bottom;
+			_text.x = _self.width / 2;
+			_text.y = _self.height / 2;
+			_text.color = _self.foreground;
+			_background_hovered = fluoresce(_self.background);
+			_foreground_hovered = fluoresce(_self.foreground);
+			[{ shape: _shape,         color: _self.background },
+			 { shape: _shape_hovered, color: _background_hovered }]
+			 .forEach(function(i){
+				i.shape.graphics.clear().beginFill(i.color).drawRect(0, 0, _self.width, _self.height);
+			 });
+		}
+		if (_self.disabled) {
+			_text.color          = _self.foreground;
+			_text.alpha          = 0.2;
+			_shape.alpha         = 0.2;
+			_shape_hovered.alpha = 0;
+		}
+		else if (_self.hover && _self.pressed){
+			_text.color          = _foreground_hovered;
+			_text.alpha          = 1;
+			_shape.alpha         = 1;
+			_shape_hovered.alpha = 0.5;
+		}
+		else if (_self.hover) {
+			_text.color          = _foreground_hovered;
+			_text.alpha          = 1;
+			_shape.alpha         = 1;
+			_shape_hovered.alpha = 1.0;
+		}
+		else {
+			_text.color          = _self.foreground;
+			_text.alpha          = 1;
+			_shape.alpha         = 1;
+			_shape_hovered.alpha = 0;
+		}
+	}
+	_self.init();
 }, MouseAwareContainer);
 var StackPanel = __class(function(){
 	var _self = this;
@@ -627,62 +661,130 @@ var StackPanel = __class(function(){
 }, createjs.Container);
 var SoundModal = __class(function () {
 	var _self = this;
+	var _changeCallbacks = [];
+	var _fileInput;
 	var _outerPanel;
-	var _message;
+	var _text1;
+	var _text2;
+	var _selectButton;
+	var _testButton;
+	var _testAudio;
+	var _removeBUtton;
 	var _btnPanel;
 	var _invalidated = true;
 	function getButton(msg, color) {
 		var button = new Button();
 		button.text = msg;
 		button.fontFamily = 'Meiryo UI';
-		button.fontSize = 20;
-		button.padding = { left : 10, right : 10, bottom: 10, top: 10 };
+		button.fontSize = 18;
+		button.padding = { left : 50, right : 50, bottom: 10, top: 10 };
 		button.foreground = color.strong;
 		button.background = color.weak;
-		button.update();
 		return button;
 	}
-	_self.invalidate = function () {
-		_invalidated = true;
+	_self.invalidate = function () { _invalidated = true; }
+	_self.change = function (callback) {
+		if (callback === undefined) _changeCallbacks.forEach(function(callback) { callback.apply(_self); })
+		else _changeCallbacks.push(callback);	
 	}
 	__props(_self, [
 		{ prop: 'width', get: function() { _self.update(); return _outerPanel.width } },
 		{ prop: 'height', get: function() { _self.update(); return _outerPanel.height } },
-		{ prop: 'title', afterset: _self.invalidate },
-		{ prop: 'background', value: 'white', afterset: _self.invalidate },
-		{ prop: 'foreground', value: 'dimgray', afterset: _self.invalidate },
-		{ prop: 'message', value: 'アラーム音は設定されていません', afterset: _self.invalidate },
-		{ prop: 'messageFontSize', value: 20, afterset: _self.invalidate },
+		{ prop: 'background', value: '#111', afterset: _self.invalidate },
+		{ prop: 'foreground', value: '#eee', afterset: _self.invalidate },
+		{ prop: 'messageFontSize', value: 18, afterset: _self.invalidate },
 		{ prop: 'messageFontFamily', value: 'Meiryo UI', afterset: _self.invalidate },
+		{ prop: 'soundDataURL', afterset: function () { _self.change(); } },
 	]);
+	_self.stopTest = function () {
+		if (_testAudio)
+			_testAudio.remove();
+		_testAudio = null;	
+	}
 	_self.init = function() {
+		_fileInput = $('<input>')
+			.attr('type', 'file')
+			.css('width', '0px')
+			.css('height', '0px')
+			.css('visibility', 'false')
+			.appendTo(document.body)
+			.change(function (e1) {
+				var reader = new FileReader();
+				// http://www.w3.org/TR/FileAPI/#dfn-load-event
+				reader.onload = function (e2) {
+					_self.soundDataURL = e2.target.result;
+				}
+				reader.readAsDataURL(e1.target.files[0]);
+			});
+		_selectButton = getButton('設定', colors[1]);
+		_selectButton.click(function () { 
+			_self.stopTest(); 
+			_fileInput.click();
+		});
+		_testButton   = getButton('テスト', colors[2]);
+		_testButton.click(function () {
+			_self.stopTest(); 
+			_testAudio = $('<audio>')
+				.css('width', '0px')
+				.css('height', '0px')
+				.css('visibility', 'hidden')
+				.attr('autoplay', 'autoplay')
+				.attr('src', _self.soundDataURL)
+				.appendTo(document.body);
+		});
+		_removeButton = getButton('削除', colors[0]);
+		_removeButton.click(function () {
+			_self.stopTest();
+			_self.soundDataURL = null;
+		});
+		_self.change(function(){
+			var hasDataURL = (_self.soundDataURL != null);
+			_selectButton.disabled =  hasDataURL;
+			_testButton.disabled   = !hasDataURL;
+			_removeButton.disabled = !hasDataURL;
+			_text1.text = !hasDataURL ? 'アラーム音は設定してください' 
+				: 'アラーム音はブラウザに保存されています';
+			_text2.text = !hasDataURL ? '選択したファイルはブラウザに保存されます'
+				: sizestr(_self.soundDataURL.length);
+			// invalidate to re-calculate text bounds 
+			_self.invalidate();
+		});
+		
 		_btnPanel = new StackPanel();
-		_message = new createjs.Text();
+		_text1 = new createjs.Text();
+		_text2 = new createjs.Text();
 		_outerPanel = new StackPanel();
-		_outerPanel.addChild(_message);
+		_outerPanel.addChild(_text1);
+		_outerPanel.addChild(_text2);
 		_outerPanel.addChild(_btnPanel)
 		_outerPanel.orientation = 'v';
 		_outerPanel.childArrangement = 'n';
 		_outerPanel.childSpacing = 40;
 		_btnPanel.childSpacing = 10;
 		_btnPanel.orientation = 'h';
-		_btnPanel.addChild(getButton('アラーム音を設定する', colors[1]));
-		_btnPanel.addChild(getButton('アラーム音を削除する', colors[0]));
+		_btnPanel.addChild(_selectButton);
+		_btnPanel.addChild(_testButton);
+		_btnPanel.addChild(_removeButton);
 		_self.addChild(_outerPanel);
+		_self.change();
 		_self.update();
 	}
 	_self.update = function (){
+		if (_invalidated) {
+			_invalidated = false;
+			_outerPanel.background = _self.background;
+			_text2.color = _text1.color = _self.foreground;
+			_text2.font = _text1.font = [Math.round(_self.messageFontSize), 'px ', _self.messageFontFamily].join('');
+			_text2.width = _text2.getMeasuredWidth();
+			_text2.height = _text2.text.length > 0 ? _text2.getMeasuredHeight() : 0;
+			_text1.width  = _text1.getMeasuredWidth();
+			_text1.height = _text1.getMeasuredHeight();
+		} 
 		_outerPanel.update();
 		_btnPanel.update();
-		if (!_invalidated) return;
-		_invalidated = false;
-		_outerPanel.background = _self.background;
-		_message.text = _self.message;
-		_message.color = _self.foreground;
-		_message.font = [Math.round(_self.messageFontSize), 'px ', _self.messageFontFamily].join('');
-		_message.width = _message.getMeasuredWidth();
-		_message.height = _message.getMeasuredHeight();
 	}
+
+
 	_self.init();
 }, createjs.Container);
 // Utilities
@@ -777,4 +879,12 @@ function fluoresce(css, multiplier) {
 	if (multiplier === undefined) multiplier = 1;
 	var c = new iro.Color(css);
 	return (c.h > 180 ? c.o('h', -5) : c.o('h', 5)).o('s', 20 * multiplier).o('l', 10 * multiplier).css();
+}
+function sizestr(length) {
+	var units   = ['バイト', 'KB', 'MB'];
+	var divider = 1;
+	for (var c = 0; c < units.length; c++, divider *= 1024) 
+		if (length < divider * 1024)
+			break;
+	return [(length / divider).toFixed(2), units[c]].join('');
 }
