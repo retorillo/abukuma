@@ -113,6 +113,7 @@ var OperationSelector = __class(function() {
 var OperationButton = __class(function () {
 	var _self = this;
 	var _invalidated = true;
+	var _strongColor, _weakColor, _strongColor_hovered, _weakColor_hovered;
 	_self.invalidate = function () { _invalidated = true; }
 	__props(_self, [
 		{ prop: 'width',     afterset: _self.invalidate },
@@ -120,28 +121,32 @@ var OperationButton = __class(function () {
 		{ prop: 'operation', afterset: _self.invalidate },
 	]);
 	_self.init = function () {
-		_self.hoverlight = new createjs.Shape();
 		_self.shape = new createjs.Shape();
+		_self.shape_hovered = new createjs.Shape();
 		_self.text_id = new createjs.Text();
 		_self.text_name = new createjs.Text();
 		_self.text_desc = new createjs.Text();
 		_self.shape_ship = new createjs.Shape();
+		_self.shape_ship_hovered = new createjs.Shape();
 		_self.hitArea = _self.shape;
 		_self.addChild(_self.shape);
+		_self.addChild(_self.shape_hovered);
 		_self.addChild(_self.text_id);
 		_self.addChild(_self.text_name);
 		_self.addChild(_self.text_desc);
 		_self.addChild(_self.shape_ship);
-		_self.addChild(_self.hoverlight);
 		_self.update();
 	}
+
 	_self.update = function () {
 		if (_invalidated && this.operation) {
 			_invalidated = false;
 
 			var op = this.operation;
-			var strongColor = op.area.strongColor;
-			var weakColor = op.area.weakColor;
+			_weakColor = op.area.color;
+			_strongColor = new iro.Color(_weakColor).o('s', 10).o('l', -45).css();
+			_strongColor_hovered = fluoresce(_strongColor, 1.5);
+			_weakColor_hovered = fluoresce(_weakColor, 1.5);
 
 			// straight constant
 			var id_fontsize_rate = 0.6; // vs _self.height
@@ -162,13 +167,6 @@ var OperationButton = __class(function () {
 			var name_padleft = Math.round(name_padleft_rate * name_fontsize);
 			var desc_fontsize = Math.round(desc_fontsize_rate * _self.height);
 
-			_self.shape.graphics.f(weakColor).rect(0, 0, _self.width, _self.height)
-				.f(strongColor).rect(id_region.x, id_region.y, id_region.w, id_region.h);
-
-			_self.hoverlight.alpha = 0;
-			_self.hoverlight.graphics.f("white").rect(0, 0, _self.width, _self.height);
-
-			_self.text_id.color = weakColor;
 			_self.text_id.x = id_region.w / 2 + id_region.x;
 			_self.text_id.y = id_region.h / 2 + id_region.y;
 			_self.text_id.textAlign = "center";
@@ -176,7 +174,6 @@ var OperationButton = __class(function () {
 			_self.text_id.text = format("{0:d2}", op.id);
 			_self.text_id.font = id_fontsize + "px Segoe UI Semilight";
 
-			_self.text_name.color = strongColor;
 			_self.text_name.x = id_region.x + id_region.w + name_padleft;
 			_self.text_name.y = id_region.h / 4 + id_region.y;
 			_self.text_name.textAlign = "left";
@@ -190,7 +187,6 @@ var OperationButton = __class(function () {
 			if (op.ammo)  desc.push(format("弾 {0:d}", op.ammo));
 			if (op.baux)  desc.push(format("ボ {0:d}", op.baux));
 
-			_self.text_desc.color = strongColor;
 			_self.text_desc.x = id_region.x + id_region.w + name_padleft;
 			_self.text_desc.y = id_region.h * 3 / 4 + id_region.y;
 			_self.text_desc.textAlign = "left";
@@ -198,33 +194,59 @@ var OperationButton = __class(function () {
 			_self.text_desc.text = desc.join(" ");
 			_self.text_desc.font = desc_fontsize + "px Meiryo UI";
 
-			//ships
-			_self.shape_ship.x = ships_region.x;
-			_self.shape_ship.y = ships_region.y;
+			// shape (background)
+			[{ shape: _self.shape,         strong: _strongColor,         weak: _weakColor         },
+			 { shape: _self.shape_hovered, strong: _strongColor_hovered, weak: _weakColor_hovered }]
+			 .forEach(function(i) {
+				i.shape.graphics.f(i.weak).rect(0, 0, _self.width, _self.height)
+					.f(i.strong).rect(id_region.x, id_region.y, id_region.w, id_region.h);
+			 });
+			// ships
 			var shiprect = makeGrid(new Rect(0, 0, ships_region.w, ships_region.h), 2, 3, 5);
-			if (op.ships != undefined) {
-				var g = _self.shape_ship.graphics;
-				op.ships.forEach(function (ship, index) {
-					if (ship == ships.lightCruiser)
-						g.f(strongColor);
-					else if (ship == ships.destroyer ||
-						ship == ships.unspecified)
-						g.s(strongColor);
-					var r = shiprect[index];
-					g.rect(r.x, r.y, r.w, r.h);
-					if (ship == ships.destroyer)
-						g.mt(r.x, r.y).lt(r.x + r.w, r.y + r.h);
-					g.ef().es();
-				});
-			}
+			[{ shape: _self.shape_ship,         strong: _strongColor,         weak: _weakColor  },
+			 { shape: _self.shape_ship_hovered, strong: _strongColor_hovered, weak: _weakColor_hovered }]
+			 .forEach(function(i) {
+				i.shape.x = ships_region.x;
+				i.shape.y = ships_region.y;
+				if (op.ships != undefined) {
+					var g = i.shape.graphics;
+					op.ships.forEach(function (ship, index) {
+						if (ship == ships.lightCruiser)
+							g.f(i.strong);
+						else if (ship == ships.destroyer ||
+							ship == ships.unspecified)
+							g.s(i.strong);
+						var r = shiprect[index];
+						g.rect(r.x, r.y, r.w, r.h);
+						if (ship == ships.destroyer)
+							g.mt(r.x, r.y).lt(r.x + r.w, r.y + r.h);
+						g.ef().es();
+					});
+				}
+			 });
 		}
 
-		if (_self.hover && _self.pressed)
-			this.hoverlight.alpha = 0.4;
-		else if (_self.hover)
-			this.hoverlight.alpha = 0.2;
-		else
-			this.hoverlight.alpha = 0;
+		if (_self.hover && _self.pressed){
+			_self.text_id.color   = _weakColor_hovered;
+			_self.text_name.color = _strongColor_hovered;
+			_self.text_desc.color = _strongColor_hovered;
+			this.shape_hovered.alpha      = 0.5;
+			this.shape_ship_hovered.alpha = 0.5;
+		}
+		else if (_self.hover) {
+			_self.text_id.color   = _weakColor_hovered;
+			_self.text_name.color = _strongColor_hovered;
+			_self.text_desc.color = _strongColor_hovered;
+			this.shape_hovered.alpha      = 1.0;
+			this.shape_ship_hovered.alpha = 1.0;
+		}
+		else {
+			_self.text_id.color = _weakColor;
+			_self.text_name.color = _strongColor;
+			_self.text_desc.color = _strongColor;
+			this.shape_hovered.alpha = 0;
+			this.shape_ship_hovered.alpha = 0;
+		}
 	}
 	_self.init();
 }, MouseAwareContainer);
@@ -268,16 +290,14 @@ var ProgressCircle = __class(function () {
 		{ prop: 'width', value: 0, afterset: _self.invalidate },
 		{ prop: 'height', value: 0, afterset: _self.invalidate },
 		{ prop: 'strongColor', set: function(color) {
-				var c = new iro.Color(color)
-				_strongColor = c.css('hex');
-				_strongColor_hover = fluoresce(c).css('hex');
+				_strongColor = color;
+				_strongColor_hover = fluoresce(color)
 				_self.invalidate();
 			},
 		},
 		{ prop: 'weakColor', set: function(color) {
-				var c = new iro.Color(color)
-				_weakColor = c.css('hex');
-				_weakColor_hover = fluoresce(c).css('hex');
+				_weakColor = color;
+				_weakColor_hover = fluoresce(color);
 				_self.invalidate();
 			},
 		},
@@ -742,6 +762,8 @@ function zigzagSort(x, y, rects, padx, pady, oddbase) {
 		});
 	}
 }
-function fluoresce(c) {
-	return (c.h > 180 ? c.o('h', -5) : c.o('h', 5)).o('s', 20).o('l', 10);
+function fluoresce(css, multiplier) {
+	if (multiplier === undefined) multiplier = 1;
+	var c = new iro.Color(css);
+	return (c.h > 180 ? c.o('h', -5) : c.o('h', 5)).o('s', 20 * multiplier).o('l', 10 * multiplier).css();
 }

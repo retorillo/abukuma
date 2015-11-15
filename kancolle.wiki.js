@@ -7,10 +7,10 @@ ships.destroyer    = { shortName: "駆" };
 ships.unspecified  = { shortName: '艦' };
 
 var areas = {};
-areas.home  = { strongColor: "rgb(40, 40, 40)", weakColor: "rgb(250, 200, 0)", name: "鎮守府海域"  };
-areas.seast = { strongColor: "rgb(40, 40, 40)", weakColor: "rgb(200, 0, 250)", name: "南西諸島海域" };
-areas.north = { strongColor: "rgb(40, 40, 40)", weakColor: "rgb(0, 250, 200)", name: "北方海域"  };
-areas.south = { strongColor: "rgb(40, 40, 40)", weakColor: "rgb(200, 250, 0)", name: "南方海域" };
+areas.home  = { color: "rgb(250, 200, 0)", name: "鎮守府海域"  };
+areas.seast = { color: "rgb(200, 0, 250)", name: "南西諸島海域" };
+areas.north = { color: "rgb(0, 250, 200)", name: "北方海域"  };
+areas.south = { color: "rgb(200, 250, 0)", name: "南方海域" };
 
 var operations = [];
 {
