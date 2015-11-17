@@ -1,6 +1,8 @@
-/* Abukuma.js Copyright (C) Retorillo
-   Dependencies: classdef.js, create.js, moment.js */
-//TODO: replaced by createjs.Rectangle
+/*! Abukuma.js Copyright (C) Retorillo
+    Dependencies: classdef.js, create.js, moment.js, iro.Color.js */
+var colors = [{ strong: "rgb(0, 200, 250)", weak: "rgb(0, 120, 150)" },
+	      { strong: "rgb(250, 200, 0)", weak: "rgb(150, 120, 0)" },
+	      { strong: "rgb(250, 0, 200)", weak: "rgb(150, 0, 120)" }];
 var Rect = __class(function (x, y, w, h) {
 	var _self = this;
 	_self.x = x != undefined ? x : 0;
@@ -14,6 +16,21 @@ var Rect = __class(function (x, y, w, h) {
 	}
 	_self.clone = function () {
 		return new Rect(_self.x, _self.y, _self.w, _self.h);
+	}
+	_self.table = function (cols, rows, cellspacing) {
+		var cells = [];
+		var cell_w = _self.w / cols;
+		var cell_h = _self.h / rows;
+		for (var r = 0; r < rows; r++) {
+			for (var c = 0; c < cols; c++) {
+				var x = c * cell_w + cellspacing / 2 + _self.x;
+				var y = r * cell_h + cellspacing / 2 + _self.y;
+				var w = Math.max(1, cell_w - cellspacing);
+				var h = Math.max(1, cell_h - cellspacing);
+				cells.push(new Rect(x, y, w, h));
+			}
+		}
+		return cells;
 	}
 });
 var MouseEventListener = __class(function (displayObject) {
@@ -49,6 +66,7 @@ var MouseAwareContainer = __class(function () {
 	]);
 	this.click = function (handler) { return _mel.click(handler); }
 }, createjs.Container);
+// TODO: implement WrapPanel from OperationSelector  
 var OperationSelector = __class(function() {
 	var _self = this;
 	var _width = 0, _height = 0;
@@ -97,8 +115,6 @@ var OperationSelector = __class(function() {
 				_self.addChild(opb);
 				_width = Math.max(_width, item_x + _item_width + _cellspacing);
 				_height = Math.max(_height, item_y + _item_height + _cellspacing);
-				//TODO: opb.backgroud ?
-				// _self.background = background;
 				count++;
 			});
 			_self.shape.graphics.c().f(_self.background || "black").rect(0, 0, _width, _height);
@@ -200,9 +216,10 @@ var OperationButton = __class(function () {
 			 .forEach(function(i) {
 				i.shape.graphics.f(i.weak).rect(0, 0, _self.width, _self.height)
 					.f(i.strong).rect(id_region.x, id_region.y, id_region.w, id_region.h);
+				i.shape.cache(0, 0, _self.width, _self.height);	
 			 });
 			// ships
-			var shiprect = makeGrid(new Rect(0, 0, ships_region.w, ships_region.h), 2, 3, 5);
+			var shiprect = new Rect(0, 0, ships_region.w, ships_region.h).table(2, 3, 5);
 			[{ shape: _self.shape_ship,         strong: _strongColor,         weak: _weakColor  },
 			 { shape: _self.shape_ship_hovered, strong: _strongColor_hovered, weak: _weakColor_hovered }]
 			 .forEach(function(i) {
@@ -223,6 +240,7 @@ var OperationButton = __class(function () {
 						g.ef().es();
 					});
 				}
+				i.shape.cache(0, 0, ships_region.w, ships_region.h);
 			 });
 		}
 
@@ -553,6 +571,7 @@ var Button = __class(function() {
 			 { shape: _shape_hovered, color: _background_hovered }]
 			 .forEach(function(i){
 				i.shape.graphics.clear().beginFill(i.color).drawRect(0, 0, _self.width, _self.height);
+				i.shape.cache(0, 0, _self.width, _self.height);
 			 });
 		}
 		if (_self.disabled) {
@@ -582,20 +601,29 @@ var Button = __class(function() {
 	}
 	_self.init();
 }, MouseAwareContainer);
-var StackPanel = __class(function(){
+// Panel size(width, height) is autoin contrast with other controls  
+var Panel = __class(function() {
+	// TODO: add _border shape and border thickness boder color
 	var _self = this;
 	var _base = {};
-	var _algn = 0; 
-	var _vert = false;
-	var _bkg  = new createjs.Shape();
-	_self.addChild(_bkg);
+	var _bkg, _bkg_invalidated = true;
 	var _invalidated = true;
-	var _skip = _self.children.length;
-
-	_self.invalidate = function (){
-		_invalidated = true;
-	};
-
+	_self.invalidate = function (){ _invalidated = true; };
+	// Skip children added by super-class
+	var _skip; 
+	// Do not use children.forEach on Panel and its sub-classes
+	// Use 'all' method to enumerate all children. See '_skip' field
+	// Pay attention that index of predicate(child, index) is relative index  
+	_self.all = function(predicate) {
+		var result = true;
+		for (var c = _skip; c < _self.children.length; c ++)
+			result &= predicate.apply(_self, [_self.children[c], c - _skip]);
+		return result;
+	}
+	__props(_self, [
+		{ prop: 'disabled', afterset: _self.all(function(c){ c.disabled = _self.disabled })},
+		{ prop: 'background', afterset: function() { _bkg_invalidated = true; } },
+	]);
 	['addChild', 'removeChild', 'swapChild'].forEach(function(method){
 		_base[method] = _self[method];
 		_self[method] = function() {
@@ -603,62 +631,151 @@ var StackPanel = __class(function(){
 			_self.invalidate();
 		}
 	});
-
+	// override layout method to change layout behavior
+	_self.layout = function () {
+		var r = 0, b = 0
+		_self.all(function(child, index){
+			r = Math.max(r, child.x + child.width);
+			b = Math.max(b, child.y + child.height);
+		});
+		_self.width = r;
+		_self.height = b;
+	}
+	_self.init = function(){
+		_bkg = new createjs.Shape();
+		_self.addChild(_bkg);
+		_skip = _self.children.length;
+		_self.update();
+	}
+	_self.update = function(){
+		_self.all(function(c) { if (c.update) c.update(); });
+		if (_invalidated) {
+			_invalidated = false;
+			_self.layout.apply(_self);
+			// Invalidate bkg because layout may change width and height
+			_bkg_invalidated = true;
+		}
+		if (_bkg_invalidated) {
+			_bkg_invalidated = false;
+			_bkg.graphics.c();
+			if (_self.background)
+				_bkg.graphics.f(_self.background)
+					.dr(0, 0, _self.width, _self.height);
+			_bkg.cache(0, 0, _self.width, _self.height);		
+		}
+	}
+	_self.init();
+}, createjs.Container);
+var StackPanel = __class(function(){
+	var _self = this;
+	_self.aligntest = function () { 
+		var ca = _self.childAlignment;
+		return /^c/i.test(ca) ? 0 : (/^n/i.test(ca) ? -1 : 1); 
+	}
+	_self.verttest = function () { return /^v/i.test(_self.orientation); }
 	__props(_self, [
-		{ prop: 'background', afterset: _self.invalidate },
 		{ prop: 'padding', value: 10, afterset: _self.invalidate },
 		{ prop: 'childSpacing', value: 0, afterset: _self.invalidate },
-		{ prop: 'childAlignment',
-			get: function() {
-				return _algn != 0 ? (_algn < 0 ? 'near' : 'far') : 'center';
-			},
-			set: function(value) {
-				_algn = /^c/i.test(value) ? 0 : (/^n/i.test(value) ? -1 : 1);
-				_self.invalidate();
-			}
-		},
-		{ prop: 'orientation',
-			get: function() {
-				return _vert ? "vertical" : "horizontal";
-			},
-			set: function(value) {
-				_vert = /^v/i.test(value);
-				_self.invalidate();
-			}
-		}
+		{ prop: 'childAlignment', value: 'center', afterset: _self.invalidate },
+		{ prop: 'orientation', value: 'horizontal', afterset: _self.invalidate },
 	]);
-	
-	_self.update = function () {
-		_self.children.forEach(function(c) { if (c.update) c.update(); });
-		if (!_invalidated) return;
-		_invalidated = false;
+	_self.layout = function () {
+		var vert = _self.verttest();
+		var align = _self.aligntest();
 		var tw = _self.padding;
 		var mh = 0;
-		var nx = _vert ? 'y' : 'x';
-		var ny = _vert ? 'x' : 'y';
-		var nw = _vert ? 'height' : 'width';
-		var nh = _vert ? 'width' : 'height';
-		_self.children.forEach(function(child, index) {
-			if (index < _skip) return; 
+		var nx = vert ? 'y' : 'x';
+		var ny = vert ? 'x' : 'y';
+		var nw = vert ? 'height' : 'width';
+		var nh = vert ? 'width' : 'height';
+		_self.all(function(child, index) {
 			mh = Math.max(mh, child[nh]);
 		});
-		_self.children.forEach(function(child, index){
-			if (index < _skip) return;
-			if (index > _skip) {
-				tw += _self.childSpacing;
-			}
+		_self.all(function(child, index){
+			if (index > 0) { tw += _self.childSpacing; }
 			var dh = mh - child[nh]; 
 			child[nx] = tw;
-			child[ny] = _algn == 0 ? (dh / 2 + _self.padding) : (_algn < 0 ? dh : 0);
+			child[ny] = align == 0 ? (dh / 2 + _self.padding) : (align < 0 ? dh : 0);
 			tw += child[nw];
 		});
 		_self[nw] = tw + _self.padding;
 		_self[nh] = mh + _self.padding * 2;
-		_bkg.graphics.c();
-		if (_self.background)
-			_bkg.graphics.f(_self.background).dr(0, 0, !_vert ? _self[nw] : _self[nh], !_vert ? _self[nh] : _self[nw]);
 	}
-}, createjs.Container);
+}, Panel);
+var BrickStackPanel = __class(function() {
+	var _self = this;
+	__props(_self,[
+		{ prop: 'verticalChildSpacing',   value: 0, afterset: _self.invalidate },
+		{ prop: 'horizontalChildSpacing', value: 0, afterset: _self.invalidate }
+	]);
+	_self.layout = function () {
+		var align = _self.aligntest();
+		var vert = _self.verttest();
+		var nx = vert ? 'y' : 'x';
+		var ny = vert ? 'x' : 'y';
+		var nw = vert ? 'height' : 'width';
+		var nh = vert ? 'width'  : 'height';
+		var hcs = (vert ? _self.verticalChildSpacing : _self.horizontalChildSpacing) + _self.childSpacing;
+		var vcs = (vert ? _self.horizontalChildSpacing : _self.verticalChildSpacing) + _self.childSpacing;
+		var even = [], odds = [];
+		even.mh = 0; odds.mh = 0;
+		_self.all(function(c, i) { (i % 2 == 0 ? even : odds).push(c) });
+		even.forEach(function(c) { even.mh = Math.max(even.mh, c[nh]); })
+		odds.forEach(function(c) { odds.mh = Math.max(odds.mh, c[nh]); })
+		var x = _self.padding;
+		even.forEach(function(c, i) {
+			var diff = even.mh - c[nh];
+			c[ny]  = align == 0 ? diff / 2 : (align == -1 ? 0 : diff); 
+			c[ny] += _self.padding;
+			c[nx]  = x;
+			c[nx] += i > 0 ? hcs : 0;
+			x      = c[nx] + c[nw];
+		});
+		odds.forEach(function(c, i) {
+			var diff = odds.mh - c[nh];
+			c[ny]  = align == 0 ? diff / 2 : (align == -1 ? -diff : 0); 
+			c[ny] += even.mh + vcs;
+			c[ny] += _self.padding;
+			c[nx]  = even[i][nx] + even[i][nw] - c[nw] / 2;
+			c[nx] += hcs / 2; 
+			x      = Math.max(x, c[nx] + c[nw]);
+		});
+		_self[nw] = x + _self.padding;
+		_self[nh] = even.mh + odds.mh + _self.padding * 2 + (odds.length > 0 ? vcs : 0);
+	}
+}, StackPanel);
+var CountdownCircleSet = __class(function(){
+	var _self = this;
+	var _invalidated = false;
+	var _itemclick = [];
+	_self.padding = 0;
+	_self.orientation = 'v';
+	_self.verticalChildSpacing = 80;
+	_self.horizontalChildSpacing = -40;
+	_self.childSpacing = 0;
+	_self.itemclick = function () {
+		var c = this; // Never chagne this to _self
+		if (arguments.length == 0)
+			_itemclick.forEach(function (f) { f.apply(c, [c]) });			
+		else
+			_itemclick.push(arguments[0]);
+	};
+	[{ w: 150, h: 150, c: colors[0] },
+	 { w: 300, h: 300, c: colors[1] },
+	 { w: 150, h: 150, c: colors[2] }]
+	 .forEach(function(i){
+		var c = new CountdownCircle();
+		// TODO: set them when operation is stored at KeyValueStore, otherwise set defaults
+		// WARNING: operations[index] is unavailable now. (some index will returns null)
+		// c.restartOperation(operations[index]);
+		c.width = i.w;
+		c.height = i.h;
+		c.strongColor = i.c.strong;
+		c.weakColor = i.c.weak;
+		c.click(function () { _self.itemclick.apply(c); });
+		_self.addChild(c);
+	 });
+ }, BrickStackPanel);
 var SoundModal = __class(function () {
 	var _self = this;
 	var _changeCallbacks = [];
@@ -749,7 +866,6 @@ var SoundModal = __class(function () {
 			// invalidate to re-calculate text bounds 
 			_self.invalidate();
 		});
-		
 		_btnPanel = new StackPanel();
 		_text1 = new createjs.Text();
 		_text2 = new createjs.Text();
@@ -773,20 +889,80 @@ var SoundModal = __class(function () {
 		if (_invalidated) {
 			_invalidated = false;
 			_outerPanel.background = _self.background;
-			_text2.color = _text1.color = _self.foreground;
-			_text2.font = _text1.font = [Math.round(_self.messageFontSize), 'px ', _self.messageFontFamily].join('');
-			_text2.width = _text2.getMeasuredWidth();
-			_text2.height = _text2.text.length > 0 ? _text2.getMeasuredHeight() : 0;
-			_text1.width  = _text1.getMeasuredWidth();
-			_text1.height = _text1.getMeasuredHeight();
+			var font = [Math.round(_self.messageFontSize), 'px ', _self.messageFontFamily].join('');
+			[_text1, _text2].forEach(function(text){
+				text.color  = _self.foreground;
+				text.font   = font;
+				text.width  = text.getMeasuredWidth();
+				text.height = text.getMeasuredHeight();
+				text.cache(0, 0, text.width, text.height * 1.2);
+			});
+			// _outerPanel must be layouted forcely
+			_outerPanel.layout();
 		} 
 		_outerPanel.update();
 		_btnPanel.update();
 	}
-
-
 	_self.init();
 }, createjs.Container);
+// Speaker
+var Speaker = __class(function () {
+	var _self = this;
+	var _dp, _hdp; 
+	var _invalidated = true;
+	_self.invalidate = function() { _invalidated = true }
+	__props(_self, [
+		{ prop: 'width',      value: 40,     afterset: _self.invalidate },
+		{ prop: 'height',     value: 40,     afterset: _self.invalidate },
+		{ prop: 'color',      value: '#0ef', afterset: _self.invalidate },
+		{ prop: 'mutedColor', value: '#f0e', afterset: _self.invalidate },
+		{ prop: 'volume',     value: 0,      afterset: _self.invalidate },
+	]);
+	_self.init = function() {
+		_dp = new createjs.DisplayObject();
+		_hdp = new createjs.DisplayObject();
+		_dp.base_draw = _dp.draw;
+		_hdp.base_draw = _hdp.draw;
+		_self.addChild(_dp);
+		_self.addChild(_hdp);
+		_self.update();
+	}
+	_self.update = function() {
+		if (_invalidated) {
+			_invalidated = false;
+			var color  = _self.volume == 0 ? _self.mutedColor : _self.color; 
+			var hcolor = fluoresce(color);
+			[{ dp: _dp,  color: color },
+			 { dp: _hdp, color: hcolor }]
+			 .forEach(function(i){
+				i.dp.draw = function (ctx, ic) {
+					if (this.base_draw(ctx,ic)) return true; 
+					var style = {
+						body_c: i.color,
+						wave_c: [i.color, i.color, i.color],
+						mute_c: i.color,
+					}
+					canvasicon.drawSpeaker(ctx, 0, 0,
+						_self.width, _self.height, _self.volume, style);
+					return true;
+				}
+				i.dp.cache(0, 0, _self.width, _self.height);
+			 });
+		}
+		if (_self.disabled) {
+		}
+		else if (_self.hover && _self.pressed){
+			_hdp.alpha = 0.5;
+		}
+		else if (_self.hover) {
+			_hdp.alpha = 1.0
+		}
+		else {
+			_hdp.alpha = 0;
+		}
+	}
+	_self.init();
+}, MouseAwareContainer);
 // Utilities
 function padLeft(val, length) {
 	return length >= val.toString().length ? (function (c, l) {
@@ -810,75 +986,10 @@ function format(fmt) {
 		}
 	});
 }
-function makeGrid(rect, cols, rows, cellspacing) {
-	var rects = new Array();
-	var cell_w = rect.w / cols;
-	var cell_h = rect.h / rows;
-	for (var r = 0; r < rows; r++) {
-		for (var c = 0; c < cols; c++) {
-			var x = c * cell_w + cellspacing / 2 + rect.x;
-			var y = r * cell_h + cellspacing / 2 + rect.y;
-			var w = Math.max(1, cell_w - cellspacing);
-			var h = Math.max(1, cell_h - cellspacing);
-			rects.push(new Rect(x, y, w, h));
-		}
-	}
-	return rects;
-}
-function zigzagSort(x, y, rects, padx, pady, oddbase) {
-	if (padx == undefined) padx = 0;
-	if (pady == undefined) pady = 0;
-
-	var evenRects = new Array();
-	var oddRects = new Array();
-	rects.forEach(function (rect, index) {
-		(index % 2 == 1 ? oddRects : evenRects).push(rect);
-	});
-	var even_maxw = 0;
-	var even_totalh = 0;
-	var odd_maxw = 0;
-	var odd_totalh = 0;
-	evenRects.forEach(function (rect) { even_maxw = Math.max(rect.w, even_maxw); even_totalh += rect.h; });
-	oddRects.forEach(function (rect) { odd_maxw = Math.max(rect.w, odd_maxw); odd_totalh += rect.h; });
-
-	if (!oddbase /*even_totalh >= odd_totalh*/) {
-		var even_y = y;
-		evenRects.forEach(function (rect, index) {
-			rect.x = x + (even_maxw - rect.w) / 2;
-			rect.y = even_y;
-			even_y += rect.h + pady;
-		});
-		oddRects.forEach(function (rect, index) {
-			rect.x = x + even_maxw + (odd_maxw - rect.w) / 2 + padx;
-			var even = evenRects[index];
-			rect.y = (even.y + even.h) - rect.h / 2;
-		});
-	}
-	else {
-		var odd_y = y + evenRects[0].h / 2;
-		oddRects.forEach(function (rect, index) {
-			rect.x = x + even_maxw + (odd_maxw - rect.w) / 2
-                + padx;
-			rect.y = odd_y;
-			odd_y += rect.y;
-		});
-		evenRects.forEach(function (rect, index) {
-			rect.x = x + (even_maxw - rect.w) / 2;
-			if (index % 2 == 0) {
-				var odd = oddRects[index];
-				rect.y = odd.y - rect.h / 2 - pady;
-			}
-			else {
-				var odd = oddRects[index - 1];
-				rect.y = (odd.y + odd.h) - rect.h / 2 + pady;
-			}
-		});
-	}
-}
 function fluoresce(css, multiplier) {
 	if (multiplier === undefined) multiplier = 1;
 	var c = new iro.Color(css);
-	return (c.h > 180 ? c.o('h', -5) : c.o('h', 5)).o('s', 20 * multiplier).o('l', 10 * multiplier).css();
+	return (c.h > 180 ? c.o('h', -5) : c.o('h', 5)).o('s', 20 * multiplier).o('l', 10 * multiplier).css('hex');
 }
 function sizestr(length) {
 	var units   = ['バイト', 'KB', 'MB'];
