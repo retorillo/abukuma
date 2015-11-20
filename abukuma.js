@@ -1,5 +1,30 @@
 /*! Abukuma.js Copyright (C) Retorillo
     Dependencies: classdef.js, create.js, moment.js, iro.Color.js */
+// TODO: Rewrite code by using __event method if required
+// TODO: NotificationManager should keep CountdownCircle class to sync its state
+/*
+		    Figure.1 CountdownCircle.state
+	 _____________________                  ____________________
+	|                     |   if state=1   |                    |
+	| NotificationManager |<---------------| CountdownCircleSet |
+	|_____________________|      push      |____________________|
+		|        ^  ^                        ^
+		|        |  |                        | set state=0
+		|        |  |                      __|___________
+		|________|  |_____________________|              |
+		  snooze            dismiss       | User Dismiss |
+		                                  |______________|
+
+		| state  | Description               |
+		|--------|---------------------------|
+		|   -1   | Dismissed                 |
+		|    0   | Pending                   |
+		|    1   | Completed                 |
+
+		NotificationManager will STOP EXISTING
+	           and play new audio when complete
+	        (Snooze count also reset at this time)
+*/
 var colors = [{ strong: "rgb(0, 200, 250)", weak: "rgb(0, 120, 150)" },
 	      { strong: "rgb(250, 200, 0)", weak: "rgb(150, 120, 0)" },
 	      { strong: "rgb(250, 0, 200)", weak: "rgb(150, 0, 120)" }];
@@ -313,13 +338,18 @@ var ProgressCircle = __class(function () {
 				_self.invalidate();
 			},
 		},
-		{ prop: 'weakColor', set: function(color) {
+		{ prop: 'weakColor', 
+			set: function(color) {
 				_weakColor = color;
 				_weakColor_hover = fluoresce(color);
 				_self.invalidate();
 			},
 		},
-		{ prop: 'activity', set: function (value) {
+		{ prop: 'activity', 
+			get: function () {
+				return _self.text_activity.text;
+			},
+			set: function (value) {
 				_self.text_activity.text = value;
 				_self.text_activity.update();
 			},
@@ -388,7 +418,6 @@ var ProgressCircle = __class(function () {
 				text.x = _self.width / 2;
 				text.y = _self.height / 2;
 			});
-
 			var act = _self.text_activity;
 			act.radius = _radius - _thickness;
 			act.x = _centerX - act.radius;
@@ -397,7 +426,6 @@ var ProgressCircle = __class(function () {
 			act.fontFamily = _self.activityFontFamily;
 			act.charSpacing = activityCharSpacing;
 		}
-
 		var strongColor = _self.hover ? _strongColor_hover : _strongColor;
 		var weakColor = _self.hover ? _weakColor_hover : _weakColor;
 		_self.shape.graphics.clear();
@@ -418,26 +446,43 @@ var ProgressCircle = __class(function () {
 var CountdownCircle = __class(function () {
 	var _self = this;
 	var _countdown = new MomentCountdown(moment.duration(30, "m"));
-	var _base = {}
+	var _base = {};
 	_base.update = _self.update;
 	__props(_self, [
-		{ prop: "startTime", get: function () { return _countdown.startTime; } },
-		{ prop: "duration", get: function () { return _countdown.duration; } }
+		{ prop: "countdown", get: function () { return _countdown; } },
 	]);
-	_self.restart = function (activity, duration, startTime) {
+	_self.json = function() {
+		if (arguments.length == 0){
+			return JSON.stringfy({
+				completed: _self.completed,
+				startTime: _countdown.startTime.unix(),
+				duration:  _countdown.duration.asSeconds(),
+				activity:  _self.activity,
+			});
+		}
+		else {
+			var data = JSON.parse(arguments[0]);
+			if (!data.completed) {
+				var duration = moment.duration(data.duration, 's');
+				_self.restart(data.activity, duration, data.startTime, data.completed);
+			}
+		}
+	}
+	_self.restart = function (activity, duration, startTime, completed) {
 		// duration must be moment.duration
 		// startTime must be moment, nullable
 		_self.activity = activity;
 		_countdown.reset(duration, startTime);
+		_countdown.completed = completed;
 	}
 	_self.update = function () {
 		_countdown.update();
-		this.progress = _countdown.timeLeftRate * 360,
-		this.marquee = _countdown.secondRate * 360,
-		this.timeLeft = Math.ceil(_countdown.timeLeft.asMinutes());
-		this.endTime = _countdown.endTime.format("HH:mm");
-		this.completed = _countdown.completed;
-		this.reverse = _countdown.oddSecond;
+		_self.progress = _countdown.timeLeftRate * 360,
+		_self.marquee = _countdown.secondRate * 360,
+		_self.timeLeft = Math.ceil(_countdown.timeLeft.asMinutes());
+		_self.endTime = _countdown.endTime.format("HH:mm");
+		_self.completed = _countdown.completed;
+		_self.reverse = _countdown.oddSecond;
 		_base.update();
 	}
 }, ProgressCircle);
@@ -493,37 +538,54 @@ var TextInCircle = __class(function () {
 	_self.init();
 }, createjs.Container);
 var MomentCountdown = __class(function () {
-	// Private Members
 	var _self = this;
-	var _zeroLeft = moment.duration(0, "seconds");
-	// Public Members
+	var _zero = moment.duration(0, "seconds");
+	__props(_self, [
+		{ prop: 'duration' },
+		{ prop: 'startTime' },
+		{ prop: 'endTime' },
+		{ prop: 'completed', value: true },
+		{ prop: 'timeLeft' },
+		{ prop: 'timeLeftRaw' },
+		{ prop: 'secondRate' }, // for marquee
+		{ prop: 'oddSecond' }, // for marquee
+	]);
+	__events(_self, [
+		{ name: 'complete' }
+	]);
 	_self.reset = function (duration, startTime) {
 		// duration must be moment.duration
 		// startTime must be moment, nullable
-		_self.duration = duration;
+		_self.duration = duration || _zero;
 		_self.startTime = startTime || moment();
 		_self.endTime = _self.startTime.clone().add(duration);
-		_self.completed = false;
-		_self.timeLeft = null;
-		_self.timeLeftRaw = null;
-		_self.timeLeftRate = 1.0;
-		_self.secondRate = 0; // for marquee
-		_self.oddSecond = false; // for marquee
+		_self.completed = _self.duration.asSeconds() == 0 ? true : false;
+		_self.timeLeft = moment.duration(0);
+		_self.timeLeftRaw = moment.duration(0);
+		_self.timeLeftRate = _self.completed ? 0 : 1.0;
+		_self.secondRate = 0; 
+		_self.oddSecond = false;
 	}
 	_self.stop = function () {
+		// TODO: Is _self.disabled = true correct here?
 		_self.endTime = new moment();
 	}
 	_self.update = function () {
-		_self.timeLeft = _self.timeLeftRaw = moment.duration(_self.endTime.diff(moment()), "ms");
-		if (_self.timeLeftRaw.asMilliseconds() < 0) {
-			_self.timeLeft = _zeroLeft;
-			_self.completed = true;
+		_self.timeLeftRaw = moment.duration(_self.endTime.diff(moment()), "ms");
+		if (!_self.completed) {
+			_self.timeLeft = _self.timeLeftRaw;
+			if (_self.timeLeft.asMilliseconds() < 0) {
+				_self.timeLeft = _zero;
+				_self.completed = true;
+				_self.complete();
+				// Never return here, must update some propreties always for marquee animation
+			}
+			_self.secondRate = _self.timeLeft.milliseconds() / 1000;
+			_self.timeLeftRate = _self.timeLeft.asMilliseconds() / _self.duration.asMilliseconds();
 		}
-		_self.secondRate = _self.timeLeft.milliseconds() / 1000;
 		_self.oddSecond = Math.abs(_self.timeLeftRaw.seconds()) % 2 != 1;
-		_self.timeLeftRate = _self.timeLeft.asMilliseconds() / _self.duration.asMilliseconds();
 	}
-	_self.reset(_zeroLeft);
+	_self.reset();
 });
 var Button = __class(function() {
 	var _self = this;
@@ -744,38 +806,75 @@ var BrickStackPanel = __class(function() {
 		_self[nh] = even.mh + odds.mh + _self.padding * 2 + (odds.length > 0 ? vcs : 0);
 	}
 }, StackPanel);
+// TODO: Extract AudioPlayer class from SoundModal Test Button
+var AudioPlayer = __class(function() {
+	var _self = this;
+	_self.play = function () {
+	
+	}
+	_self.stop = function () {
+	
+	}
+});
+// TODO: Snooze is not required into save data, snooze is must be required only Notification Mamager?
+var NotificationManager = __class(function(){
+	var _self   = this;
+	var _player = new AudioPlayer();
+	var _timer  = 
+	_self.push = function(circle){
+		// circle must be CountdownCircle class
+		// TODO: Notification log
+		_player.play();
+		console.log("ALERT!!");
+	}
+});
 var CountdownCircleSet = __class(function(){
 	var _self = this;
+	var _notifmgr = new NotificationManager();
 	var _invalidated = false;
-	var _itemclick = [];
+	var _factories = [{ w: 150, h: 150, c: colors[0] },
+		 	  { w: 300, h: 300, c: colors[1] },
+			  { w: 150, h: 150, c: colors[2] }];
+	__events(_self, [
+		{ name: 'itemclick' },
+		{ name: 'itemcomplete'  },
+	]);
 	_self.padding = 0;
 	_self.orientation = 'v';
 	_self.verticalChildSpacing = 80;
 	_self.horizontalChildSpacing = -40;
 	_self.childSpacing = 0;
-	_self.itemclick = function () {
-		var c = this; // Never chagne this to _self
-		if (arguments.length == 0)
-			_itemclick.forEach(function (f) { f.apply(c, [c]) });			
-		else
-			_itemclick.push(arguments[0]);
-	};
-	[{ w: 150, h: 150, c: colors[0] },
-	 { w: 300, h: 300, c: colors[1] },
-	 { w: 150, h: 150, c: colors[2] }]
-	 .forEach(function(i){
+	_self.stringfy = function() {
+		var data = [];
+		// TODO: Should assert circle is CountDownCircle?
+		_self.all(function(circle){ data.push(circle.json()); });
+		return JSON.stringfy(data);
+	}
+	_factories.forEach(function(f){
 		var c = new CountdownCircle();
 		// TODO: set them when operation is stored at KeyValueStore, otherwise set defaults
 		// WARNING: operations[index] is unavailable now. (some index will returns null)
 		// c.restartOperation(operations[index]);
-		c.width = i.w;
-		c.height = i.h;
-		c.strongColor = i.c.strong;
-		c.weakColor = i.c.weak;
+		c.width = f.w;
+		c.height = f.h;
+		c.strongColor = f.c.strong;
+		c.weakColor = f.c.weak;
 		c.click(function () { _self.itemclick.apply(c); });
+		// TODO: CountdownCircle.complete comflicted with CountdownCircle.countdown.complete
+		c.countdown.complete(function () { _self.itemcomplete.apply(c); });
 		_self.addChild(c);
-	 });
- }, BrickStackPanel);
+	});
+	_self.dismiss = function () {
+		_self.all(function(circle) {
+			if (circle.status > 0)
+				circle.status = -1;
+		});
+		_notifmgr.dismiss();
+	}
+	_self.itemcomplete(function(){
+		_notifmgr.push(this); 
+	});
+}, BrickStackPanel);
 var SoundModal = __class(function () {
 	var _self = this;
 	var _changeCallbacks = [];
@@ -925,6 +1024,11 @@ var Speaker = __class(function () {
 		_hdp.base_draw = _hdp.draw;
 		_self.addChild(_dp);
 		_self.addChild(_hdp);
+
+		var hitArea = new createjs.Shape();
+		hitArea.graphics.f('#000').rect(0, 0, _self.width, _self.height);
+		_self.hitArea = hitArea;
+
 		_self.update();
 	}
 	_self.update = function() {

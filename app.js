@@ -1,5 +1,8 @@
-var settings = new KeyValueStore("retorillo_abukuma_settings");
+var store = new KeyValueStore('n1kz52w0mhf4');
 // TODO: Load timer status and mp3
+// TODO: Please Wait Modal
+// TODO: Use JSON.stringfy and JSON.parse to save circles
+
 $(function () {
 	var soundModal, circles, modalbg;
 	var stage = new createjs.Stage("stage");
@@ -62,8 +65,8 @@ $(function () {
 
 	// Circles
 	circles = new CountdownCircleSet();
-	circles.itemclick(function(c){
-		selector.target = c;
+	circles.itemclick(function(){
+		selector.target = this;
 		selector.show(true);
 	});
 	
