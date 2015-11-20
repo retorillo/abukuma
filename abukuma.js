@@ -830,12 +830,14 @@ var AudioPlayer = __class(function() {
 var NotificationManager = __class(function(){
 	var _self   = this;
 	var _player = new AudioPlayer();
-	var _timer  = 
+	var _timer  =
+	__props(_self, [
+		{ prop: "audioURL" }
+	]);
 	_self.push = function(circle){
 		// circle must be CountdownCircle class
 		// TODO: Notification log
-		_player.play();
-		console.log("ALERT!!");
+		_player.play(_self.audioURL);
 	}
 });
 var CountdownCircleSet = __class(function(){
@@ -873,16 +875,6 @@ var CountdownCircleSet = __class(function(){
 		// TODO: CountdownCircle.complete comflicted with CountdownCircle.countdown.complete
 		c.countdown.complete(function () { _self.itemcomplete.apply(c); });
 		_self.addChild(c);
-	});
-	_self.dismiss = function () {
-		_self.all(function(circle) {
-			if (circle.status > 0)
-				circle.status = -1;
-		});
-		_notifmgr.dismiss();
-	}
-	_self.itemcomplete(function(){
-		_notifmgr.push(this); 
 	});
 }, BrickStackPanel);
 var SoundModal = __class(function () {
