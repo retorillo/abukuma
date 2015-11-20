@@ -842,7 +842,6 @@ var NotificationManager = __class(function(){
 });
 var CountdownCircleSet = __class(function(){
 	var _self = this;
-	var _notifmgr = new NotificationManager();
 	var _invalidated = false;
 	var _factories = [{ w: 150, h: 150, c: colors[0] },
 		 	  { w: 300, h: 300, c: colors[1] },
@@ -877,7 +876,7 @@ var CountdownCircleSet = __class(function(){
 		_self.addChild(c);
 	});
 }, BrickStackPanel);
-var SoundModal = __class(function () {
+var AudioSelectModal = __class(function () {
 	var _self = this;
 	var _fileInput;
 	var _outerPanel;
@@ -907,7 +906,7 @@ var SoundModal = __class(function () {
 		{ prop: 'foreground', value: '#eee', afterset: _self.invalidate },
 		{ prop: 'messageFontSize', value: 18, afterset: _self.invalidate },
 		{ prop: 'messageFontFamily', value: 'Meiryo UI', afterset: _self.invalidate },
-		{ prop: 'soundDataURL', afterset: function () { _self.change(); } },
+		{ prop: 'audioURL', afterset: function () { _self.change(); } },
 	]);
 	__events(_self, [
 		{ name: 'change' }
@@ -927,7 +926,7 @@ var SoundModal = __class(function () {
 				var reader = new FileReader();
 				// http://www.w3.org/TR/FileAPI/#dfn-load-event
 				reader.onload = function (e2) {
-					_self.soundDataURL = e2.target.result;
+					_self.audioURL = e2.target.result;
 				}
 				reader.readAsDataURL(e1.target.files[0]);
 			});
@@ -938,22 +937,22 @@ var SoundModal = __class(function () {
 		});
 		_testButton   = getButton('テスト', colors[2]);
 		_testButton.click(function () {
-			_testPlayer.play(_self.soundDataURL);
+			_testPlayer.play(_self.audioURL);
 		});
 		_removeButton = getButton('削除', colors[0]);
 		_removeButton.click(function () {
 			_testPlayer.stop();
-			_self.soundDataURL = null;
+			_self.audioURL = null;
 		});
 		_self.change(function(){
-			var hasDataURL = (_self.soundDataURL != null);
+			var hasDataURL = (_self.audioURL != null);
 			_selectButton.disabled =  hasDataURL;
 			_testButton.disabled   = !hasDataURL;
 			_removeButton.disabled = !hasDataURL;
 			_text1.text = !hasDataURL ? 'アラーム音は設定してください' 
 				: 'アラーム音はブラウザに保存されています';
 			_text2.text = !hasDataURL ? '選択したファイルはブラウザに保存されます'
-				: sizestr(_self.soundDataURL.length);
+				: sizestr(_self.audioURL.length);
 			// invalidate to re-calculate text bounds 
 			_self.invalidate();
 		});

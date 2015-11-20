@@ -4,7 +4,7 @@ var store = new KeyValueStore('n1kz52w0mhf4');
 // TODO: Use JSON.stringfy and JSON.parse to save circles
 
 $(function () {
-	var soundModal, circles, modalbg;
+	var audioModal, circles, modalbg;
 	var stage = new createjs.Stage("stage");
 	stage.enableMouseOver();
 	function promoteToModal(modal, onhide){
@@ -49,9 +49,12 @@ $(function () {
 	speaker.x = stage.canvas.width - speaker.width - speaker_margin;
 	speaker.y = stage.canvas.height - speaker.height - speaker_margin;
 	speaker.click(function() {
-		soundModal.show();
+		audioModal.show();
 	});
 	stage.addChild(speaker);
+
+	// NotificationManager
+	var notifmgr = new NotificationManager();
 
 	// Selector
 	var selector = new OperationSelector();
@@ -69,24 +72,28 @@ $(function () {
 		selector.target = this;
 		selector.show(true);
 	});
-	
+	circles.itemcomplete(function(){
+		notifmgr.push(this); 
+	});
+
 	// ModalBg and Selector must be placed after circles
 	stage.addChild(circles);
 	stage.addChild(modalbg);
 	stage.addChild(selector);
 
-	// TODO: SoundModal window border
-	// TODO: SoundModal.hasDataURL property to check more precisely
+	// TODO: AudioSelectModal window border
+	// TODO: AudioSelectModal.hasDataURL property to check more precisely
 	// TODO: Button control border
-	soundModal = new SoundModal();
-	stage.addChild(soundModal);
-	soundModal.x = (stage.canvas.width - soundModal.width) / 2;
-	soundModal.y = (stage.canvas.height - soundModal.height) / 2;
-	soundModal.change(function(){
-		speaker.volume = soundModal.soundDataURL != null ? 100 : 0;
+	audioModal = new AudioSelectModal();
+	stage.addChild(audioModal);
+	audioModal.x = (stage.canvas.width - audioModal.width) / 2;
+	audioModal.y = (stage.canvas.height - audioModal.height) / 2;
+	audioModal.change(function(){
+		notifmgr.audioURL = audioModal.audioURL; 
+		speaker.volume = audioModal.audioURL != null ? 1 : 0;
 	});
-	promoteToModal(soundModal, soundModal.stopTest)
-	soundModal.show();
+	promoteToModal(audioModal, audioModal.stopTest)
+	audioModal.show();
 	
 	circles.layout();
 	circles.x = (stage.canvas.width - circles.width) / 2;
@@ -94,7 +101,7 @@ $(function () {
 
 
 	createjs.Ticker.addEventListener("tick", function (event) {
-		soundModal.update();
+		audioModal.update();
 		selector.update();
 		circles.update();
 		speaker.update();
