@@ -809,35 +809,61 @@ var BrickStackPanel = __class(function() {
 var AudioPlayer = __class(function() {
 	var _self = this;
 	var _audio;
-	_self.play = function (dataURL) {
+//	var _vctrl = {};
+//	__props(_vctrl, [{ 
+//		prop: 'volume', 
+//		afterset: function () {
+//			if (!_audio) return;
+//			_audio.attr('volume', _vctrl.value);
+//		}
+//	}]);
+	_self.play = function (dataURL, duration) {
 		_self.stop(); 
 		_audio = $('<audio>')
 			.css('width', '0px')
 			.css('height', '0px')
 			.css('visibility', 'hidden')
 			.attr('autoplay', 'autoplay')
+			.attr('loop', 'true')
 			.attr('src', dataURL)
 			.appendTo(document.body);
 	}
 	_self.stop = function () {
-		// TODO: Fade Out
 		if (_audio)
 			_audio.remove();
-		_audio = null;	
+		_audio = null;
+// <audio> volume attribute is not supported 		
+// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/audio
+//		createjs.Tween
+//			.get(_vctrl, {override: true})
+//			.to({ volume: 1 }, 0)
+//			     .to({ volume: 0 }, 10000)
+//			     .call(function(){
+//				if (_audio)
+//					_audio.remove();
+//				_audio = null;
+//			     });
 	}
 });
 // TODO: Snooze is not required into save data, snooze is must be required only Notification Mamager?
 var NotificationManager = __class(function(){
 	var _self   = this;
 	var _player = new AudioPlayer();
-	var _timer  =
+	var _timer;
+	var _timeout;
 	__props(_self, [
+		{ prop: "timeout", value: moment.duration(10, 's') },
 		{ prop: "audioURL" }
 	]);
 	_self.push = function(circle){
 		// circle must be CountdownCircle class
 		// TODO: Notification log
 		_player.play(_self.audioURL);
+		if (_timeout)
+			clearTimeout(_timeout);
+		_timeout = setTimeout(function() {
+			_player.stop();
+		}, _self.timeout.asMilliseconds());
 	}
 });
 var CountdownCircleSet = __class(function(){
