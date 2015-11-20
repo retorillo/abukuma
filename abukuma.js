@@ -806,14 +806,24 @@ var BrickStackPanel = __class(function() {
 		_self[nh] = even.mh + odds.mh + _self.padding * 2 + (odds.length > 0 ? vcs : 0);
 	}
 }, StackPanel);
-// TODO: Extract AudioPlayer class from SoundModal Test Button
 var AudioPlayer = __class(function() {
 	var _self = this;
-	_self.play = function () {
-	
+	var _audio;
+	_self.play = function (dataURL) {
+		_self.stop(); 
+		_audio = $('<audio>')
+			.css('width', '0px')
+			.css('height', '0px')
+			.css('visibility', 'hidden')
+			.attr('autoplay', 'autoplay')
+			.attr('src', dataURL)
+			.appendTo(document.body);
 	}
 	_self.stop = function () {
-	
+		// TODO: Fade Out
+		if (_audio)
+			_audio.remove();
+		_audio = null;	
 	}
 });
 // TODO: Snooze is not required into save data, snooze is must be required only Notification Mamager?
@@ -877,14 +887,13 @@ var CountdownCircleSet = __class(function(){
 }, BrickStackPanel);
 var SoundModal = __class(function () {
 	var _self = this;
-	var _changeCallbacks = [];
 	var _fileInput;
 	var _outerPanel;
 	var _text1;
 	var _text2;
 	var _selectButton;
 	var _testButton;
-	var _testAudio;
+	var _testPlayer;
 	var _removeBUtton;
 	var _btnPanel;
 	var _invalidated = true;
@@ -899,10 +908,6 @@ var SoundModal = __class(function () {
 		return button;
 	}
 	_self.invalidate = function () { _invalidated = true; }
-	_self.change = function (callback) {
-		if (callback === undefined) _changeCallbacks.forEach(function(callback) { callback.apply(_self); })
-		else _changeCallbacks.push(callback);	
-	}
 	__props(_self, [
 		{ prop: 'width', get: function() { _self.update(); return _outerPanel.width } },
 		{ prop: 'height', get: function() { _self.update(); return _outerPanel.height } },
@@ -912,12 +917,14 @@ var SoundModal = __class(function () {
 		{ prop: 'messageFontFamily', value: 'Meiryo UI', afterset: _self.invalidate },
 		{ prop: 'soundDataURL', afterset: function () { _self.change(); } },
 	]);
+	__events(_self, [
+		{ name: 'change' }
+	]);
 	_self.stopTest = function () {
-		if (_testAudio)
-			_testAudio.remove();
-		_testAudio = null;	
+		_testPlayer.stop();
 	}
 	_self.init = function() {
+		_testPlayer = new AudioPlayer();
 		_fileInput = $('<input>')
 			.attr('type', 'file')
 			.css('width', '0px')
@@ -934,23 +941,16 @@ var SoundModal = __class(function () {
 			});
 		_selectButton = getButton('設定', colors[1]);
 		_selectButton.click(function () { 
-			_self.stopTest(); 
+			_testPlayer.stop(); 
 			_fileInput.click();
 		});
 		_testButton   = getButton('テスト', colors[2]);
 		_testButton.click(function () {
-			_self.stopTest(); 
-			_testAudio = $('<audio>')
-				.css('width', '0px')
-				.css('height', '0px')
-				.css('visibility', 'hidden')
-				.attr('autoplay', 'autoplay')
-				.attr('src', _self.soundDataURL)
-				.appendTo(document.body);
+			_testPlayer.play(_self.soundDataURL);
 		});
 		_removeButton = getButton('削除', colors[0]);
 		_removeButton.click(function () {
-			_self.stopTest();
+			_testPlayer.stop();
 			_self.soundDataURL = null;
 		});
 		_self.change(function(){
