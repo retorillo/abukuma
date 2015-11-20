@@ -11,12 +11,12 @@
 param([parameter(mandatory=$true)][string]$htmlpath, [switch]$reverse)
 
 $htmlpath = resolve-path $htmlpath
-$client = new net.webclient;
+$client = new-object net.webclient;
 if ($reverse) {
-	$r = new regex '(?<=<(script|link).*?(src|href)=")([^"]+)(?=")' 
+	$r = new-object regex '(?<=<(script|link).*?(src|href)=")([^"]+)(?=")' 
 }
 else {
-	$r = new regex '(?<=<(script|link).*?(src|href)=")((?:http://|https://)[^"]+)(?=")'
+	$r = new-object regex '(?<=<(script|link).*?(src|href)=")((?:http://|https://)[^"]+)(?=")'
 }
 
 $tpath = $htmlpath + ".swp"
@@ -28,9 +28,9 @@ if (-not (test-path $ddir)) {
 }
 if (-not (test-path $map)) {
 	if ($reverse) {
-		throw new InvalidOperationException("map file not found, cannot reverse");
+		throw new-object InvalidOperationException("map file not found, cannot reverse");
 	}
-	$x = new xml 
+	$x = new-object xml 
 	[void]$x.appendChild($x.createElement('cdn2local'));
 }
 else {
