@@ -817,6 +817,7 @@ var AudioFadeoutDisposer = __class(function () {
 		_tween = null;
 	}
 	_self.push = function(audio, duration){	
+		_current = audio;
 		if (!audio) return;
 		if (_tween)  _self.clear(); 
 		_tween = mktween(audio, duration).call(_self.clear);
