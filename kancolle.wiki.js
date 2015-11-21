@@ -7,7 +7,8 @@ ships.destroyer    = { shortName: "駆" };
 ships.unspecified  = { shortName: '艦' };
 
 var areas = {};
-areas.home  = { color: "rgb(250, 200, 0)", name: "鎮守府海域"  };
+areas.debug = { color: "rgb(250, 0, 200)",  name: "動作試験" };
+areas.home  = { color: "rgb(250, 200, 0)", name: "鎮守府海域" };
 areas.seast = { color: "rgb(200, 0, 250)", name: "南西諸島海域" };
 areas.north = { color: "rgb(0, 250, 200)", name: "北方海域"  };
 areas.south = { color: "rgb(200, 250, 0)", name: "南方海域" };
@@ -15,6 +16,7 @@ areas.south = { color: "rgb(200, 250, 0)", name: "南方海域" };
 var operations = [];
 {
 	// ARA
+	setara( 99, areas.debug, "拾秒動作試験");
 	setara(  2, areas.home,  "長距離練習航海");
 	setara(  3, areas.home,  "警備任務");
 	setara(  5, areas.home,  "海上護衛任務");
@@ -26,6 +28,7 @@ var operations = [];
 	setara( 38, areas.south, "東京急行 弐");
 
 	// RES      dur | ful | amo | stl | bax
+	setres( 99,  1/6,  999,  999,  999,    0);
 	setres(  2,   30,    0,  100,   30,    0);
 	setres(  3,   20,   30,   30,   40,    0);
 	setres(  5,   90,  200,  200,   20,   20);
@@ -46,6 +49,8 @@ var operations = [];
 	setreq( 21, ships.lightCruiser, 1, ships.destroyer,   4)
 	setreq( 37, ships.lightCruiser, 1, ships.destroyer,   5)
 	setreq( 38, ships.destroyer,    6)
+	setreq( 99, ships.unspecified,  6)
+
 
 	function setara(id, area, name){
 		operations[id] = operations[id] || {};

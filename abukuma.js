@@ -846,7 +846,12 @@ var AudioPlayer = __class(function() {
 	var _disposer = new AudioFadeoutDisposer();
 	var _tween;
 	var _afterstop;
+	var _playing;
+	__props(_self, [
+		{ prop: 'playing', get: function(){ return _playing; } }
+	]);
 	_self.play = function (dataURL) {
+		_playing = true;
 		// Cross fade 5000ms
 		_disposer.push(_audio, 5000);
 		_audio = $('<audio>')
@@ -859,6 +864,7 @@ var AudioPlayer = __class(function() {
 		_audio.get(0).src = dataURL;
 	}
 	_self.stop = function () {
+		_playing = false;
 		// Stop quickly 500ms
 		_disposer.push(_audio, 500);
 	}
@@ -869,21 +875,50 @@ var AudioPlayer = __class(function() {
 var NotificationManager = __class(function(){
 	var _self   = this;
 	var _player = new AudioPlayer();
-	var _timer;
-	var _timeout;
+	var _startTime;
+	var _stopTime;
+	var _tick;
 	__props(_self, [
-		{ prop: "timeout", value: moment.duration(10, 's') },
-		{ prop: "audioURL" }
+		{ prop: "ringDuration",   value: moment.duration(10, 's') },
+		{ prop: "snoozeCount",    valeu: 0 },
+		{ prop: "snoozeMaxCount", value: 3 },
+		{ prop: "snoozeInterval", value: moment.duration(10, 's') },
+		{ prop: "audioURL" },
 	]);
+	__events(_self, [
+		{ name: "snooze" },
+	]);
+	_self.snooze(function(){
+		console.log("snooze! " + _self.snoozeCount);
+	});
+	_tick = setInterval(function(){
+		var now = moment().unix();
+		if (_startTime && now > _startTime) {
+			_startTime = null;
+			_self.snoozeCount++;
+			_self.playWhile(_self.ringDuration);
+			_self.snooze();
+		}
+		if (_stopTime && now > _stopTime) {
+			_player.stop();			
+			_stopTime = null;
+			if (_self.snoozeCount < _self.snoozeMaxCount) {
+				_self.playAfter(_self.snoozeInterval);
+			}
+		}
+	}, 500);
+	_self.playAfter = function(duration){
+		_startTime = moment().add(duration).unix();
+	}
+	_self.playWhile = function(duration){
+		_stopTime = moment().add(duration).unix();
+		_player.play(_self.audioURL);
+	}
 	_self.push = function(circle){
 		// circle must be CountdownCircle class
 		// TODO: Notification log
-		_player.play(_self.audioURL);
-		if (_timeout)
-			clearTimeout(_timeout);
-		_timeout = setTimeout(function() {
-			_player.stop();
-		}, _self.timeout.asMilliseconds());
+		_self.snoozeCount = 0;
+		_self.playWhile(_self.ringDuration);
 	}
 });
 var CountdownCircleSet = __class(function(){
