@@ -870,34 +870,39 @@ var NotificationManager = __class(function(){
 	var _stopTime;
 	var _tick;
 	__props(_self, [
-		{ prop: "ringDuration",   value: moment.duration(10, 's') },
+		{ prop: "ringDuration",   value: moment.duration(5, 'm') },
 		{ prop: "snoozeCount",    valeu: 0 },
 		{ prop: "snoozeMaxCount", value: 3 },
-		{ prop: "snoozeInterval", value: moment.duration(10, 's') },
+		{ prop: "snoozeInterval", value: moment.duration(5, 'm') },
 		{ prop: "audioURL" },
 	]);
 	__events(_self, [
-		{ name: "snooze" },
+		{ name: 'ringStart' },
+		{ name: 'ringEnd'   },
+		{ name: 'snooze'    }
 	]);
-	_self.snooze(function(){
-		console.log("snooze! " + _self.snoozeCount);
-	});
 	_tick = setInterval(function(){
 		var now = moment().unix();
 		if (_startTime && now > _startTime) {
 			_startTime = null;
 			_self.snoozeCount++;
+			_self.ringStart();
 			_self.playWhile(_self.ringDuration);
 			_self.snooze();
 		}
 		if (_stopTime && now > _stopTime) {
-			_player.stop();			
+			_player.stop();
+			_self.ringEnd();
 			_stopTime = null;
 			if (_self.snoozeCount < _self.snoozeMaxCount) {
 				_self.playAfter(_self.snoozeInterval);
 			}
 		}
 	}, 500);
+	_self.dismiss = function (){
+		_startTime = _stopTime = null;
+		_player.stop();
+	}
 	_self.playAfter = function(duration){
 		_startTime = moment().add(duration).unix();
 	}
@@ -908,6 +913,8 @@ var NotificationManager = __class(function(){
 	_self.push = function(circle){
 		// circle must be CountdownCircle class
 		// TODO: Notification log
+		_startTime = _stopTime =  null;
+		_self.dismissed = false;
 		_self.snoozeCount = 0;
 		_self.playWhile(_self.ringDuration);
 	}

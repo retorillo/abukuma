@@ -1,7 +1,13 @@
 var store = new KeyValueStore('n1kz52w0mhf4');
 
-// TODO: Please Wait Modal or HTML
+//https://developer.mozilla.org/en-US/docs/Web/Events/beforeunload
+leaveMessage = "ブラウザを閉じたり、このページから移動したりするとアラーム音は鳴りませんがよろしいでしょうか。なお、ブラウザを閉じても設定した時間は維持されるため、このページを再び開けば自動的にタイマーが再開します。";
+window.addEventListener("beforeunload", function(e) {
+  e.returnValue = leaveMessage; // Gecko and Trident
+  return leaveMessage;          // Gecko and WebKit
+});
 
+// TODO: Please Wait Modal or HTML
 var prevInfo = {};
 store.open()
      .read(['audio', 'circles'])
@@ -13,34 +19,32 @@ store.open()
      .action(function(){
      	$(appstart);
      });
-
 function appstart() {
-	var audioModal, circles, modalbg;
+	var blinkbg = false;
+	var audioModal, circles, dashboard;//, modalbg;
+	var dashboard = new createjs.Container();
 	var stage = new createjs.Stage('stage');
 	stage.enableMouseOver();
+
+	// promoteToModal
 	function promoteToModal(modal, onhide){
-		if (!modalbg) {
-			modalbg = new createjs.Shape();
-			modalbg.alpha = 0.5;
-			modalbg.visible = false;
-			modalbg.graphics.f('black').rect(0, 0, stage.canvas.width, stage.canvas.height);
-		}
-		modalbg.addEventListener('click', function () {
-			modal.hide();
-		});
 		modal.hide = function () {
 			if (circles) circles.disable = false;
-			modalbg.visible = false;
+			dashboard.alpha = 1.0;
 			modal.visible = false;
 			if (onhide) onhide.apply(modal);
+			promoteToModal.bodyClick = 0;
+			promoteToModal.currentModal = null;
 		}
 		modal.show = function (v) {
+			promoteToModal.bodyClick = 0;
+			promoteToModal.currentModal = modal;
 			circles.disable = true;
-			modalbg.visible = true;
+			dashboard.alpha = 0.5;
 			modal.visible = true;
-			createjs.Tween.get(modalbg, { override: true })
-				.to({ alpha: 0 }, 0)
-				.to({ alpha: modalbg.alpha }, 500, createjs.Ease.sineOut);
+			createjs.Tween.get(dashboard, { override: true })
+				.to({ alpha: dashboard.alpha }, 0)
+				.to({ alpha: 0.5 }, 500, createjs.Ease.sineOut);
 			createjs.Tween.get(modal, { override: true })
 				.to({ alpha: 0 }, 0)
 				.to({ alpha: 1 }, 250, createjs.Ease.cubicOut);
@@ -50,6 +54,13 @@ function appstart() {
 		}
 		modal.hide();
 	};
+	promoteToModal.currentModal = null;
+	promoteToModal.bodyClick = 0;
+	document.body.addEventListener('click', function () {
+		if (promoteToModal.bodyClick++ > 0 && promoteToModal.currentModal)
+			promoteToModal.currentModal.hide();
+	});
+
 	// Speaker
 	var speaker_margin = 10;
 	var speaker = new Speaker();
@@ -58,10 +69,20 @@ function appstart() {
 	speaker.click(function() {
 		audioModal.show();
 	});
-	stage.addChild(speaker);
 
 	// NotificationManager
 	var notifmgr = new NotificationManager();
+	notifmgr.ringStart(function() {
+		//TODO: Flush Background
+		blinkbg = true;
+	});
+	notifmgr.ringEnd(function() {
+		//TODO: Flush Background
+		blinkbg = false;
+	});
+	document.body.addEventListener('click', function () {
+		notifmgr.dismiss();	
+	});
 
 	// Selector
 	var selector = new OperationSelector();
@@ -90,8 +111,11 @@ function appstart() {
 	circles.json(prevInfo.circles);
 
 	// ModalBg and Selector must be placed after circles
-	stage.addChild(circles);
-	stage.addChild(modalbg);
+	dashboard.addChild(circles);
+	dashboard.addChild(speaker);
+
+	stage.addChild(dashboard);
+	// stage.addChild(modalbg);
 	stage.addChild(selector);
 
 	// TODO: AudioSelectModal window border
@@ -119,13 +143,26 @@ function appstart() {
 	prevInfo.audo = null;
 
 	promoteToModal(audioModal, audioModal.stopTest)
-	audioModal.show();
 	
 	circles.layout();
 	circles.x = (stage.canvas.width - circles.width) / 2;
 	circles.y = (stage.canvas.height - circles.height) / 2 - speaker.height / 2;
-
+	
 	createjs.Ticker.addEventListener("tick", function (event) {
+
+		if (!blinkbg || new Date().getSeconds() % 2 == 1) {
+			document.body.style.background = "rgb(20,20,30)";
+//			canvasbg.graphics
+//				.f("rgb(30, 30, 30)")
+//				.rect(0, 0, stage.canvas.width, stage.canvas.height)
+		}
+		else {
+			document.body.style.background = "rgb(80, 5, 15)";
+//			canvasbg.graphics
+//				.f("rgb(80, 80, 80)")
+//				.rect(0, 0, stage.canvas.width, stage.canvas.height)
+		}
+
 		audioModal.update();
 		selector.update();
 		circles.update();
