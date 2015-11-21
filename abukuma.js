@@ -1,29 +1,20 @@
 /*! Abukuma.js Copyright (C) Retorillo
     Dependencies: classdef.js, create.js, moment.js, iro.Color.js */
 // TODO: Rewrite code by using __event method if required
-// TODO: NotificationManager should keep CountdownCircle class to sync its state
 /*
-		    Figure.1 CountdownCircle.state
-	 _____________________                  ____________________
-	|                     |   if state=1   |                    |
+	    Figure.1 Overview
+
+	                   (if snooze > snooze_max)
+	 _____________________      disable     ____________________
+	|                     |--------------->|                    |
 	| NotificationManager |<---------------| CountdownCircleSet |
 	|_____________________|      push      |____________________|
 		|        ^  ^                        ^
-		|        |  |                        | set state=0
+		|        |  |                        | disable
 		|        |  |                      __|___________
 		|________|  |_____________________|              |
-		  snooze            dismiss       | User Dismiss |
+		 snooze++           dismiss       | User Dismiss |
 		                                  |______________|
-
-		| state  | Description               |
-		|--------|---------------------------|
-		|   -1   | Dismissed                 |
-		|    0   | Pending                   |
-		|    1   | Completed                 |
-
-		NotificationManager will STOP EXISTING
-	           and play new audio when complete
-	        (Snooze count also reset at this time)
 */
 var colors = [{ strong: "rgb(0, 200, 250)", weak: "rgb(0, 120, 150)" },
 	      { strong: "rgb(250, 200, 0)", weak: "rgb(150, 120, 0)" },
@@ -453,7 +444,7 @@ var CountdownCircle = __class(function () {
 	]);
 	_self.json = function() {
 		if (arguments.length == 0){
-			return JSON.stringfy({
+			return JSON.stringify({
 				completed: _self.completed,
 				startTime: _countdown.startTime.unix(),
 				duration:  _countdown.duration.asSeconds(),
@@ -464,7 +455,8 @@ var CountdownCircle = __class(function () {
 			var data = JSON.parse(arguments[0]);
 			if (!data.completed) {
 				var duration = moment.duration(data.duration, 's');
-				_self.restart(data.activity, duration, data.startTime, data.completed);
+				var startTime = moment.unix(data.startTime);
+				_self.restart(data.activity, duration, startTime, data.completed);
 			}
 		}
 	}
@@ -663,7 +655,7 @@ var Button = __class(function() {
 	}
 	_self.init();
 }, MouseAwareContainer);
-// Panel size(width, height) is autoin contrast with other controls  
+// Panel size(width, height) is auto in contrast with other controls  
 var Panel = __class(function() {
 	// TODO: add _border shape and border thickness boder color
 	var _self = this;
@@ -871,7 +863,6 @@ var AudioPlayer = __class(function() {
 	function fadeout(audio) {
 	}
 });
-// TODO: Snooze is not required into save data, snooze is must be required only Notification Mamager?
 var NotificationManager = __class(function(){
 	var _self   = this;
 	var _player = new AudioPlayer();
@@ -936,11 +927,22 @@ var CountdownCircleSet = __class(function(){
 	_self.verticalChildSpacing = 80;
 	_self.horizontalChildSpacing = -40;
 	_self.childSpacing = 0;
-	_self.stringfy = function() {
-		var data = [];
-		// TODO: Should assert circle is CountDownCircle?
-		_self.all(function(circle){ data.push(circle.json()); });
-		return JSON.stringfy(data);
+	_self.json = function() {
+		if (arguments.length == 0){
+			var data = [];
+			// TODO: Should assert circle is CountDownCircle?
+			_self.all(function(circle){ 
+				data.push(circle.json());
+			});
+			return JSON.stringify(data);
+		}
+		else {
+			if (!arguments[0]) return;
+			var data = JSON.parse(arguments[0]);
+			_self.all(function(circle, index) {
+				circle.json(data[index]);
+			});
+		}
 	}
 	_factories.forEach(function(f){
 		var c = new CountdownCircle();
@@ -1076,7 +1078,6 @@ var AudioSelectModal = __class(function () {
 	}
 	_self.init();
 }, createjs.Container);
-// Speaker
 var Speaker = __class(function () {
 	var _self = this;
 	var _dp, _hdp; 
