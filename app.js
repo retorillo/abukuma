@@ -30,17 +30,23 @@ function appstart() {
 	// promoteToModal
 	function promoteToModal(modal, onhide){
 		modal.hide = function () {
-			if (circles) circles.disable = false;
+			// TODO: Improve disable/enabled mechanism
+			if (circles) circles.disabled = false;
+			if (speaker) speaker.disabled = false;
+
 			dashboard.alpha = 1.0;
 			modal.visible = false;
 			if (onhide) onhide.apply(modal);
 			promoteToModal.bodyClick = 0;
 			promoteToModal.currentModal = null;
 		}
+		bodyClickInvalidator.push(modal);
 		modal.show = function (v) {
 			promoteToModal.bodyClick = 0;
 			promoteToModal.currentModal = modal;
-			circles.disable = true;
+			circles.disabled = true;
+			speaker.disabled = true;
+
 			dashboard.alpha = 0.5;
 			modal.visible = true;
 			createjs.Tween.get(dashboard, { override: true })
@@ -57,9 +63,13 @@ function appstart() {
 	};
 	promoteToModal.currentModal = null;
 	promoteToModal.bodyClick = 0;
-	document.body.addEventListener('click', function () {
-		if (promoteToModal.bodyClick++ > 0 && promoteToModal.currentModal)
+	document.body.addEventListener('click', function (e) {
+		if (promoteToModal.bodyClick++ == 0) return;
+		console.log("click");
+		// check rectangle 
+		if (promoteToModal.currentModal)
 			promoteToModal.currentModal.hide();
+		notifmgr.dismiss();
 	});
 
 	// Speaker
@@ -97,9 +107,6 @@ function appstart() {
 	notifmgr.ringEnd(function() {
 		createjs.Tween.removeTweens(blinkBgTweenObj);
 		document.body.style.background = defaultBgColor.css('hex');
-	});
-	document.body.addEventListener('click', function () {
-		notifmgr.dismiss();	
 	});
 	document.body.style.background = defaultBgColor.css('hex');
 
@@ -167,6 +174,12 @@ function appstart() {
 	circles.x = (stage.canvas.width - circles.width) / 2;
 	circles.y = (stage.canvas.height - circles.height) / 2 - speaker.height / 2;
 	
+	bodyClickInvalidator.forEach(function(i){
+		i.addEventListener('click', function() {
+			promoteToModal.bodyClick = 0;
+			console.log("invalidator lick");
+		});
+	});
 	createjs.Ticker.addEventListener("tick", function (event) {
 		audioModal.update();
 		selector.update();

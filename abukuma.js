@@ -49,6 +49,7 @@ var Rect = __class(function (x, y, w, h) {
 		return cells;
 	}
 });
+var bodyClickInvalidator = [];
 var MouseEventListener = __class(function (displayObject) {
 	var _self = this;
 	var _handler = null;
@@ -678,7 +679,7 @@ var Panel = __class(function() {
 		return result;
 	}
 	__props(_self, [
-		{ prop: 'disabled', afterset: _self.all(function(c){ c.disabled = _self.disabled })},
+		{ prop: 'disabled', afterset: function() { _self.all(function(c){ c.disabled = _self.disabled }) }},
 		{ prop: 'background', afterset: function() { _bkg_invalidated = true; } },
 	]);
 	['addChild', 'removeChild', 'swapChild'].forEach(function(method){
@@ -1024,6 +1025,7 @@ var AudioSelectModal = __class(function () {
 				}
 				reader.readAsDataURL(e1.target.files[0]);
 			});
+		bodyClickInvalidator.push(_fileInput.get(0));
 		_selectButton = getButton('設定', colors[1]);
 		_selectButton.click(function () { 
 			_testPlayer.stop(); 
