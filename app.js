@@ -33,7 +33,6 @@ function appstart() {
 			// TODO: Improve disable/enabled mechanism
 			if (circles) circles.disabled = false;
 			if (speaker) speaker.disabled = false;
-
 			dashboard.alpha = 1.0;
 			modal.visible = false;
 			if (onhide) onhide.apply(modal);
@@ -46,7 +45,6 @@ function appstart() {
 			promoteToModal.currentModal = modal;
 			circles.disabled = true;
 			speaker.disabled = true;
-
 			dashboard.alpha = 0.5;
 			modal.visible = true;
 			createjs.Tween.get(dashboard, { override: true })
