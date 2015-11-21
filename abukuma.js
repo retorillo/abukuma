@@ -809,40 +809,53 @@ var BrickStackPanel = __class(function() {
 var AudioPlayer = __class(function() {
 	var _self = this;
 	var _audio;
-//	var _vctrl = {};
-//	__props(_vctrl, [{ 
-//		prop: 'volume', 
-//		afterset: function () {
-//			if (!_audio) return;
-//			_audio.attr('volume', _vctrl.value);
-//		}
-//	}]);
-	_self.play = function (dataURL, duration) {
-		_self.stop(); 
-		_audio = $('<audio>')
-			.css('width', '0px')
-			.css('height', '0px')
-			.css('visibility', 'hidden')
-			.attr('autoplay', 'autoplay')
-			.attr('loop', 'true')
-			.attr('src', dataURL)
-			.appendTo(document.body);
+	var _afterstop;
+	// accessor for _audio Tween animation
+	var _vctrl = {};
+	__props(_vctrl, [{ 
+		prop: 'volume', 
+		set: function (value) {
+			if (!_audio) return;
+			_audio.prop('volume', value);
+		},
+		get: function () {
+			if (!_audio) return 0;
+			return _audio.prop('volume');
+		}
+	}]);
+	_self.play = function (dataURL) {
+		_afterstop = function(){
+			_audio = $('<audio>')
+				.css('width', '0px')
+				.css('height', '0px')
+				.css('visibility', 'hidden')
+				.attr('autoplay', 'autoplay')
+				.prop('loop', 'true')
+				.attr('src', dataURL)
+				.appendTo(document.body);
+		}
+		_self.stop();
 	}
 	_self.stop = function () {
-		if (_audio)
-			_audio.remove();
-		_audio = null;
-// <audio> volume attribute is not supported 		
-// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/audio
-//		createjs.Tween
-//			.get(_vctrl, {override: true})
-//			.to({ volume: 1 }, 0)
-//			     .to({ volume: 0 }, 10000)
-//			     .call(function(){
-//				if (_audio)
-//					_audio.remove();
-//				_audio = null;
-//			     });
+		// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/audio
+		var postprocess = function() {
+			if (_afterstop)
+				_afterstop();
+			_afterstop = null;
+		}
+		if (!_audio)
+			postprocess();
+		else
+			createjs.Tween
+			.get(_vctrl, {override: true})
+			.to({ volume: 1 }, 0)
+			     .to({ volume: 0 }, 250)
+			     .call(function(){
+				if (_audio)
+					_audio.remove();
+				_audio = null;
+				postprocess();
+			     });
 	}
 });
 // TODO: Snooze is not required into save data, snooze is must be required only Notification Mamager?
