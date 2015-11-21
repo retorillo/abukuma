@@ -1,6 +1,7 @@
 var store = new KeyValueStore('n1kz52w0mhf4');
 
 //https://developer.mozilla.org/en-US/docs/Web/Events/beforeunload
+// TODO: Is only warn if timer active?
 leaveMessage = "ブラウザを閉じたり、このページから移動したりするとアラーム音は鳴りませんがよろしいでしょうか。なお、ブラウザを閉じても設定した時間は維持されるため、このページを再び開けば自動的にタイマーが再開します。";
 window.addEventListener("beforeunload", function(e) {
   e.returnValue = leaveMessage; // Gecko and Trident
@@ -21,7 +22,7 @@ store.open()
      });
 function appstart() {
 	var blinkbg = false;
-	var audioModal, circles, dashboard;//, modalbg;
+	var audioModal, circles, dashboard;
 	var dashboard = new createjs.Container();
 	var stage = new createjs.Stage('stage');
 	stage.enableMouseOver();
@@ -72,17 +73,35 @@ function appstart() {
 
 	// NotificationManager
 	var notifmgr = new NotificationManager();
+	var defaultBgColor = new iro.Color("rgb(20,20,20)");
+	var blendBgColor = new iro.Color("rgb(0,80,90)");
+	var blinkBgTweenObj = {};
+	__props(blinkBgTweenObj, [
+		{ 
+			prop: "blendRate",
+			afterset: function() {
+				blendBgColor.a = blinkBgTweenObj.blendRate;
+				var bc = defaultBgColor.clone().blend(blendBgColor, 'add').css('hex');
+				document.body.style.background = bc;
+			},
+		}
+	]);
 	notifmgr.ringStart(function() {
-		//TODO: Flush Background
 		blinkbg = true;
+		createjs.Tween
+			.get(blinkBgTweenObj, { override: true, loop: true })
+			.to({ blendRate: 0 }, 0)
+			.to({ blendRate: 1 }, 1000, createjs.Ease.cubicInOut)
+			.to({ blendRate: 0 }, 500, createjs.Ease.cubicInOut);
 	});
 	notifmgr.ringEnd(function() {
-		//TODO: Flush Background
-		blinkbg = false;
+		createjs.Tween.removeTweens(blinkBgTweenObj);
+		document.body.style.background = defaultBgColor.css('hex');
 	});
 	document.body.addEventListener('click', function () {
 		notifmgr.dismiss();	
 	});
+	document.body.style.background = defaultBgColor.css('hex');
 
 	// Selector
 	var selector = new OperationSelector();
@@ -149,20 +168,6 @@ function appstart() {
 	circles.y = (stage.canvas.height - circles.height) / 2 - speaker.height / 2;
 	
 	createjs.Ticker.addEventListener("tick", function (event) {
-
-		if (!blinkbg || new Date().getSeconds() % 2 == 1) {
-			document.body.style.background = "rgb(20,20,30)";
-//			canvasbg.graphics
-//				.f("rgb(30, 30, 30)")
-//				.rect(0, 0, stage.canvas.width, stage.canvas.height)
-		}
-		else {
-			document.body.style.background = "rgb(80, 5, 15)";
-//			canvasbg.graphics
-//				.f("rgb(80, 80, 80)")
-//				.rect(0, 0, stage.canvas.width, stage.canvas.height)
-		}
-
 		audioModal.update();
 		selector.update();
 		circles.update();

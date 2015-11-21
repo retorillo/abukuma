@@ -431,12 +431,14 @@ var ProgressCircle = __class(function () {
 			_marqueeRadius, _marqueeThickness, _self.marquee,
 			_self.reverse ? strongColor : weakColor,
 			_self.reverse ? weakColor : strongColor);
+		// TODO: Improve update method performance
+		_self.text_activity.update();	
 	}
 	_self.init();
 }, MouseAwareContainer);
 var CountdownCircle = __class(function () {
 	var _self = this;
-	var _countdown = new MomentCountdown(moment.duration(30, "m"));
+	var _countdown = new MomentCountdown(moment.duration(0, "m"));
 	var _base = {};
 	_base.update = _self.update;
 	__props(_self, [
@@ -445,7 +447,6 @@ var CountdownCircle = __class(function () {
 	_self.json = function() {
 		if (arguments.length == 0){
 			return JSON.stringify({
-				completed: _self.completed,
 				startTime: _countdown.startTime.unix(),
 				duration:  _countdown.duration.asSeconds(),
 				activity:  _self.activity,
@@ -453,19 +454,17 @@ var CountdownCircle = __class(function () {
 		}
 		else {
 			var data = JSON.parse(arguments[0]);
-			if (!data.completed) {
-				var duration = moment.duration(data.duration, 's');
-				var startTime = moment.unix(data.startTime);
-				_self.restart(data.activity, duration, startTime, data.completed);
-			}
+			var duration = moment.duration(data.duration, 's');
+			var startTime = moment.unix(data.startTime);
+			_self.restart(data.activity, duration, startTime);
 		}
 	}
-	_self.restart = function (activity, duration, startTime, completed) {
+	_self.restart = function (activity, duration, startTime) {
 		// duration must be moment.duration
 		// startTime must be moment, nullable
+		console.log(activity);
 		_self.activity = activity;
 		_countdown.reset(duration, startTime);
-		_countdown.completed = completed;
 	}
 	_self.update = function () {
 		_countdown.update();
@@ -551,7 +550,11 @@ var MomentCountdown = __class(function () {
 		_self.duration = duration || _zero;
 		_self.startTime = startTime || moment();
 		_self.endTime = _self.startTime.clone().add(duration);
-		_self.completed = _self.duration.asSeconds() == 0 ? true : false;
+
+		var completed = _self.duration.asSeconds() == 0 || 
+			moment().unix() >  _self.endTime.unix(); 
+
+		_self.completed = completed; 
 		_self.timeLeft = moment.duration(0);
 		_self.timeLeftRaw = moment.duration(0);
 		_self.timeLeftRate = _self.completed ? 0 : 1.0;
@@ -886,7 +889,6 @@ var NotificationManager = __class(function(){
 		if (_startTime && now > _startTime) {
 			_startTime = null;
 			_self.snoozeCount++;
-			_self.ringStart();
 			_self.playWhile(_self.ringDuration);
 			_self.snooze();
 		}
@@ -902,6 +904,7 @@ var NotificationManager = __class(function(){
 	_self.dismiss = function (){
 		_startTime = _stopTime = null;
 		_player.stop();
+		_self.ringEnd();
 	}
 	_self.playAfter = function(duration){
 		_startTime = moment().add(duration).unix();
@@ -909,6 +912,7 @@ var NotificationManager = __class(function(){
 	_self.playWhile = function(duration){
 		_stopTime = moment().add(duration).unix();
 		_player.play(_self.audioURL);
+		_self.ringStart();
 	}
 	_self.push = function(circle){
 		// circle must be CountdownCircle class
