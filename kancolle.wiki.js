@@ -14,7 +14,7 @@ areas.north = { color: "rgb(0, 250, 200)", name: "北方海域"  };
 areas.south = { color: "rgb(200, 250, 0)", name: "南方海域" };
 
 var operations = [];
-{
+new function () {
 	// ARA
 	setara( 99, areas.debug, "拾秒動作試験");
 	setara(  2, areas.home,  "長距離練習航海");
@@ -51,7 +51,6 @@ var operations = [];
 	setreq( 38, ships.destroyer,    6)
 	setreq( 99, ships.unspecified,  6)
 
-
 	function setara(id, area, name){
 		operations[id] = operations[id] || {};
 		operations[id].id   = id;
@@ -59,6 +58,7 @@ var operations = [];
 		operations[id].name = name;
 		operations[id].text = format("[{0:d2}] {1}", id, name);
 	}
+
 	function setreq(id) {
 		operations[id] = operations[id] || {};
 		operations[id].ships = [];
@@ -69,6 +69,7 @@ var operations = [];
 				operations[id].ships.push(x);
 		}
 	}
+
 	function setres(id, duration, fuel, ammo, steel, baux){
 		operations[id] = operations[id] || {};
 		operations[id].duration = duration;
@@ -76,5 +77,5 @@ var operations = [];
 		operations[id].ammo = ammo;
 		operations[id].steel = steel;
 		operations[id].baux = baux;
-	};
+	}
 }
