@@ -49,7 +49,6 @@ var Rect = __class(function (x, y, w, h) {
 		return cells;
 	}
 });
-var bodyClickInvalidator = [];
 var MouseEventListener = __class(function (displayObject) {
 	var _self = this;
 	var _handler = null;
@@ -63,15 +62,19 @@ var MouseEventListener = __class(function (displayObject) {
 		if (_handler)
 			displayObject.removeEventListener("click", _handler);
 		// Wrapping handler for preventing firing when disabled
-		_handler = handler ? function () { if (!_self.disabled) handler.apply(this, arguments); } : null;
+		_handler = handler ? function (e) {
+			e.stopPropagation();
+			if (!_self.disabled)
+				handler.apply(this, arguments); 
+		} : null;
 		if (_handler)
-			displayObject.addEventListener("click", _handler);
+			displayObject.addEventListener("click", _handler, false);
 	}
 	// Shape Events
-	displayObject.addEventListener("mousedown", function () { _pressed = true;  });
-	displayObject.addEventListener("pressup",   function () { _pressed = false; });
-	displayObject.addEventListener("mouseover", function () { _hover   = true;  });
-	displayObject.addEventListener("mouseout",  function () { _hover   = false; });
+	displayObject.addEventListener("mousedown", function (e) { _pressed = true;  });
+	displayObject.addEventListener("pressup",   function (e) { _pressed = false; });
+	displayObject.addEventListener("mouseover", function (e) { _hover   = true;  });
+	displayObject.addEventListener("mouseout",  function (e) { _hover   = false; });
 });
 var MouseAwareContainer = __class(function () {
 	var _self = this;
@@ -100,12 +103,9 @@ var OperationSelector = __class(function() {
 		{ prop: 'height',     get: function () { this.update(); return _height; } },
 
 	]);
-	_self.itemclick = function () {
-		if (arguments.length == 1 && typeof(arguments[0]) == "function")
-			_itemclick = arguments[0];
-		else if (arguments.length == 2)
-			_itemclick.apply(arguments[0], arguments[1]);
-	}
+	__events(_self, [
+		{ name: 'itemclick' },
+	]);
 	_self.init = function () {
 		_self.shape = new createjs.Shape();
 		_self.addChild(_self.shape);
@@ -128,7 +128,7 @@ var OperationSelector = __class(function() {
 				opb.y = item_y;
 				opb.width = _item_width; 
 				opb.height = _item_height;
-				opb.click(function () { _self.itemclick(opb, [op, count]); });
+				opb.click(function (e) { _self.itemclick.apply(op, [e]); });
 				_self.addChild(opb);
 				_width = Math.max(_width, item_x + _item_width + _cellspacing);
 				_height = Math.max(_height, item_y + _item_height + _cellspacing);
@@ -965,7 +965,7 @@ var CountdownCircleSet = __class(function(){
 		c.height = f.h;
 		c.strongColor = f.c.strong;
 		c.weakColor = f.c.weak;
-		c.click(function () { _self.itemclick.apply(c); });
+		c.click(function (e) { _self.itemclick.apply(c, [e]); });
 		// TODO: CountdownCircle.complete comflicted with CountdownCircle.countdown.complete
 		c.countdown.complete(function () { _self.itemcomplete.apply(c); });
 		_self.addChild(c);
@@ -1025,7 +1025,6 @@ var AudioSelectModal = __class(function () {
 				}
 				reader.readAsDataURL(e1.target.files[0]);
 			});
-		bodyClickInvalidator.push(_fileInput.get(0));
 		_selectButton = getButton('設定', colors[1]);
 		_selectButton.click(function () { 
 			_testPlayer.stop(); 
