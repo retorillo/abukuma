@@ -50,7 +50,6 @@ function appstart() {
 			if (onhide) onhide.apply(modal);
 			modalbg.visible = false;
 			promoteToModal.currentModal = null;
-			
 			createjs.Tween.removeTweens(dashboard);
 			createjs.Tween.removeTweens(modal);
 			dashboard.alpha = 1.0;
@@ -100,7 +99,6 @@ function appstart() {
 	speaker.y = stage.canvas.height - speaker.height - speaker_margin;
 	speaker.click(function(e) {
 		audioModal.show();
-		e.stopPropagation();
 	});
 
 	// NotificationManager
@@ -153,7 +151,6 @@ function appstart() {
 	circles.itemclick(function(e){
 		selector.target = this;
 		selector.show(true);
-		e.stopPropagation();
 	});
 	circles.itemcomplete(function(){
 		notifmgr.push(this); 
