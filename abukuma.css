@@ -1,4 +1,12 @@
-﻿audio {
+﻿@font-face {
+	font-family: "Segoe UI";
+	font-weight: 300;
+	src: local("Segoe UI Semilight");
+}
+body {
+	background: rgb(20,20,20);		
+}
+audio {
 	display: none;
 }
 .information {

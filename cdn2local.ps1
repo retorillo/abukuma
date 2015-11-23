@@ -39,7 +39,7 @@ else {
 $x = $x.SelectSingleNode('cdn2local');	
 $script:count = $x.selectNodes('map').count;
 
-type $htmlpath |
+type $htmlpath -Encoding UTF8 |
 	% { 
 		$r.replace($_, {
 			param($m)
@@ -69,6 +69,6 @@ type $htmlpath |
 	} > $tpath
 $tcontent = type $tpath
 type $htmlpath > $tpath
-$tcontent > $htmlpath	
+$tcontent | out-file -literalPath $htmlpath -encoding UTF8
 $x.outerxml > $map
 $client.dispose();

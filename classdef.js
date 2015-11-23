@@ -35,18 +35,14 @@ function __events(obj, events) {
 			// use apply method in your class as follows:
 			// _self.itemclick.apply(item); 
 			var invoker = this;
-			if (arguments.length == 0) {
-				callbacks.forEach(function (callback) {
-					callback.apply(invoker); 
-				});
-			}
-			else if (arguments.length == 1) {
-				if (typeof(arguments[0]) != 'function')
-					throw new Error('argument must be function, if specified');
+			if (arguments.length == 1 && typeof(arguments[0]) == 'function') {
 				callbacks.push(arguments[0]);
 			}
 			else {
-				throw new Error('too many arguments');
+				var arg = arguments;
+				callbacks.forEach(function (callback) {
+					callback.apply(invoker, arg); 
+				});
 			}
 		}
 	});

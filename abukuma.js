@@ -49,7 +49,6 @@ var Rect = __class(function (x, y, w, h) {
 		return cells;
 	}
 });
-var bodyClickInvalidator = [];
 var MouseEventListener = __class(function (displayObject) {
 	var _self = this;
 	var _handler = null;
@@ -63,15 +62,19 @@ var MouseEventListener = __class(function (displayObject) {
 		if (_handler)
 			displayObject.removeEventListener("click", _handler);
 		// Wrapping handler for preventing firing when disabled
-		_handler = handler ? function () { if (!_self.disabled) handler.apply(this, arguments); } : null;
+		_handler = handler ? function (e) {
+			e.stopPropagation();
+			if (!_self.disabled)
+				handler.apply(this, arguments); 
+		} : null;
 		if (_handler)
-			displayObject.addEventListener("click", _handler);
+			displayObject.addEventListener("click", _handler, false);
 	}
 	// Shape Events
-	displayObject.addEventListener("mousedown", function () { _pressed = true;  });
-	displayObject.addEventListener("pressup",   function () { _pressed = false; });
-	displayObject.addEventListener("mouseover", function () { _hover   = true;  });
-	displayObject.addEventListener("mouseout",  function () { _hover   = false; });
+	displayObject.addEventListener("mousedown", function (e) { _pressed = true;  });
+	displayObject.addEventListener("pressup",   function (e) { _pressed = false; });
+	displayObject.addEventListener("mouseover", function (e) { _hover   = true;  });
+	displayObject.addEventListener("mouseout",  function (e) { _hover   = false; });
 });
 var MouseAwareContainer = __class(function () {
 	var _self = this;
@@ -100,12 +103,9 @@ var OperationSelector = __class(function() {
 		{ prop: 'height',     get: function () { this.update(); return _height; } },
 
 	]);
-	_self.itemclick = function () {
-		if (arguments.length == 1 && typeof(arguments[0]) == "function")
-			_itemclick = arguments[0];
-		else if (arguments.length == 2)
-			_itemclick.apply(arguments[0], arguments[1]);
-	}
+	__events(_self, [
+		{ name: 'itemclick' },
+	]);
 	_self.init = function () {
 		_self.shape = new createjs.Shape();
 		_self.addChild(_self.shape);
@@ -128,7 +128,7 @@ var OperationSelector = __class(function() {
 				opb.y = item_y;
 				opb.width = _item_width; 
 				opb.height = _item_height;
-				opb.click(function () { _self.itemclick(opb, [op, count]); });
+				opb.click(function (e) { _self.itemclick.apply(op, [e]); });
 				_self.addChild(opb);
 				_width = Math.max(_width, item_x + _item_width + _cellspacing);
 				_height = Math.max(_height, item_y + _item_height + _cellspacing);
@@ -205,7 +205,7 @@ var OperationButton = __class(function () {
 			_self.text_id.textAlign = "center";
 			_self.text_id.textBaseline = "middle";
 			_self.text_id.text = format("{0:d2}", op.id);
-			_self.text_id.font = id_fontsize + "px Segoe UI Semilight";
+			_self.text_id.font = "300 " + id_fontsize + "px Segoe UI";
 
 			_self.text_name.x = id_region.x + id_region.w + name_padleft;
 			_self.text_name.y = id_region.h / 4 + id_region.y;
@@ -346,7 +346,8 @@ var ProgressCircle = __class(function () {
 				_self.text_activity.update();
 			},
 		},
-		{ prop: 'fontFamily', value: 'Segoe UI Semilight', afterset: _self.invalidate },
+		{ prop: 'fontWeight', value: '300', afterset: _self.invalidate },
+		{ prop: 'fontFamily', value: 'Segoe UI', afterset: _self.invalidate },
 		{ prop: 'activityFontFamily', value: 'Meiryo UI', afterset: _self.invalidate },
 		// progress and marquee 0 - 360
 		// reveserd should be true 
@@ -405,7 +406,7 @@ var ProgressCircle = __class(function () {
 			_marqueeThickness = _marqueeRadius * marqueeThicknessRate;
 			_self.hitAreaShape.graphics.f("white").arc(_centerX, _centerY, _radius, 0, Math.PI * 2);
 			_alltext.forEach(function (text) {
-				text.font = [Math.round(fontsizeRate * _diameter), "px ", _self.fontFamily].join('');
+				text.font = [_self.fontWeight, " ", Math.round(fontsizeRate * _diameter), "px ", _self.fontFamily].join('');
 				text.color = _strongColor;
 				text.x = _self.width / 2;
 				text.y = _self.height / 2;
@@ -849,15 +850,16 @@ var AudioPlayer = __class(function() {
 	_self.play = function (dataURL) {
 		_playing = true;
 		// Cross fade 5000ms
-		_disposer.push(_audio, 5000);
+		if (_audio)
+			_disposer.push(_audio, 5000);
 		_audio = $('<audio>')
+			.attr('src', dataURL)
 			.css('width', '0px')
 			.css('height', '0px')
 			.css('visibility', 'hidden')
 			.attr('autoplay', 'autoplay')
 			.prop('loop', 'true')
 			.appendTo(document.body);
-		_audio.get(0).src = dataURL;
 	}
 	_self.stop = function () {
 		_playing = false;
@@ -965,7 +967,7 @@ var CountdownCircleSet = __class(function(){
 		c.height = f.h;
 		c.strongColor = f.c.strong;
 		c.weakColor = f.c.weak;
-		c.click(function () { _self.itemclick.apply(c); });
+		c.click(function (e) { _self.itemclick.apply(c, [e]); });
 		// TODO: CountdownCircle.complete comflicted with CountdownCircle.countdown.complete
 		c.countdown.complete(function () { _self.itemcomplete.apply(c); });
 		_self.addChild(c);
@@ -1025,7 +1027,6 @@ var AudioSelectModal = __class(function () {
 				}
 				reader.readAsDataURL(e1.target.files[0]);
 			});
-		bodyClickInvalidator.push(_fileInput.get(0));
 		_selectButton = getButton('設定', colors[1]);
 		_selectButton.click(function () { 
 			_testPlayer.stop(); 
@@ -1045,7 +1046,7 @@ var AudioSelectModal = __class(function () {
 			_selectButton.disabled =  hasDataURL;
 			_testButton.disabled   = !hasDataURL;
 			_removeButton.disabled = !hasDataURL;
-			_text1.text = !hasDataURL ? 'アラーム音は設定してください' 
+			_text1.text = !hasDataURL ? 'アラーム音を設定してください' 
 				: 'アラーム音はブラウザに保存されています';
 			_text2.text = !hasDataURL ? '選択したファイルはブラウザに保存されます'
 				: sizestr(_self.audioURL.length);
@@ -1182,7 +1183,7 @@ function fluoresce(css, multiplier) {
 	return (c.h > 180 ? c.o('h', -5) : c.o('h', 5)).o('s', 20 * multiplier).o('l', 10 * multiplier).css('hex');
 }
 function sizestr(length) {
-	var units   = ['バイト', 'KB', 'MB'];
+	var units   = ['バイト', 'KiB', 'MiB'];
 	var divider = 1;
 	for (var c = 0; c < units.length; c++, divider *= 1024) 
 		if (length < divider * 1024)

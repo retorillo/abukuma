@@ -24,25 +24,40 @@ function appstart() {
 	var blinkbg = false;
 	var audioModal, circles, dashboard;
 	var dashboard = new createjs.Container();
-	var stage = new createjs.Stage('stage');
-	stage.enableMouseOver();
 
+	var stage = new createjs.Stage('stage');
+	// http://createjs.com/docs/easeljs/classes/Stage.html#property_hitArea
+	// The hitArea property is not supported for Stage. 
+	var stage_hitArea = new createjs.Shape();
+	stage_hitArea.hitArea = new createjs.Shape();
+	stage_hitArea.hitArea.graphics.c().f('#000').dr(0, 0, stage.canvas.width, stage.canvas.height);
+	stage.addChild(stage_hitArea);
+
+	var modalbg = new createjs.Shape();
+	modalbg.hitArea = new createjs.Shape();
+	modalbg.hitArea.graphics.c().f('#000').dr(0, 0, stage.canvas.width, stage.canvas.height);
+	
+	stage.enableMouseOver();
 	// promoteToModal
 	function promoteToModal(modal, onhide){
+		modal.addEventListener('click', function(e) {
+			e.stopPropagation();
+		});
 		modal.hide = function () {
 			// TODO: Improve disable/enabled mechanism
 			if (circles) circles.disabled = false;
 			if (speaker) speaker.disabled = false;
+			if (onhide) onhide.apply(modal);
+			modalbg.visible = false;
+			promoteToModal.currentModal = null;
+			createjs.Tween.removeTweens(dashboard);
+			createjs.Tween.removeTweens(modal);
 			dashboard.alpha = 1.0;
 			modal.visible = false;
-			if (onhide) onhide.apply(modal);
-			promoteToModal.bodyClick = 0;
-			promoteToModal.currentModal = null;
 		}
-		bodyClickInvalidator.push(modal);
 		modal.show = function (v) {
-			promoteToModal.bodyClick = 0;
 			promoteToModal.currentModal = modal;
+			modalbg.visible = true;
 			circles.disabled = true;
 			speaker.disabled = true;
 			dashboard.alpha = 0.5;
@@ -60,14 +75,21 @@ function appstart() {
 		modal.hide();
 	};
 	promoteToModal.currentModal = null;
-	promoteToModal.bodyClick = 0;
-	document.body.addEventListener('click', function (e) {
-		if (promoteToModal.bodyClick++ == 0) return;
-		console.log("click");
-		// check rectangle 
+	function raiseGlobalClick() {
 		if (promoteToModal.currentModal)
 			promoteToModal.currentModal.hide();
 		notifmgr.dismiss();
+	}
+	$(document.body).click(function(e) { raiseGlobalClick(); });
+	stage.addEventListener('click', function(e) {
+		raiseGlobalClick();
+	});
+	modalbg.addEventListener('click', function (e) {
+		e.stopPropagation();
+		raiseGlobalClick();
+	});
+	$('#stage').click(function(e) {
+		e.stopPropagation();
 	});
 
 	// Speaker
@@ -75,7 +97,7 @@ function appstart() {
 	var speaker = new Speaker();
 	speaker.x = stage.canvas.width - speaker.width - speaker_margin;
 	speaker.y = stage.canvas.height - speaker.height - speaker_margin;
-	speaker.click(function() {
+	speaker.click(function(e) {
 		audioModal.show();
 	});
 
@@ -110,7 +132,8 @@ function appstart() {
 
 	// Selector
 	var selector = new OperationSelector();
-	selector.itemclick(function (op) {
+	selector.itemclick(function () {
+		var op = this;
 		selector.target.restart(op.name, moment.duration(op.duration, "m"));
 		// TODO: More better timing of storing circles data, for example 'change' event
 		store.write([{ key: 'circles', value: circles.json() }])
@@ -125,7 +148,7 @@ function appstart() {
 
 	// Circles
 	circles = new CountdownCircleSet();
-	circles.itemclick(function(){
+	circles.itemclick(function(e){
 		selector.target = this;
 		selector.show(true);
 	});
@@ -139,7 +162,7 @@ function appstart() {
 	dashboard.addChild(speaker);
 
 	stage.addChild(dashboard);
-	// stage.addChild(modalbg);
+	stage.addChild(modalbg);
 	stage.addChild(selector);
 
 	// TODO: AudioSelectModal window border
@@ -172,12 +195,6 @@ function appstart() {
 	circles.x = (stage.canvas.width - circles.width) / 2;
 	circles.y = (stage.canvas.height - circles.height) / 2 - speaker.height / 2;
 	
-	bodyClickInvalidator.forEach(function(i){
-		i.addEventListener('click', function() {
-			promoteToModal.bodyClick = 0;
-			console.log("invalidator lick");
-		});
-	});
 	createjs.Ticker.addEventListener("tick", function (event) {
 		audioModal.update();
 		selector.update();
