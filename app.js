@@ -1,14 +1,24 @@
 // Tab
 $(function(){
-	$(".tabpage").hide();
-	$(".tabs li").each(function(){
-		var $tab = $(this);
-		$tab.click(function(e){
-			$(".tabpage").hide();
-			$(".tabpage[data-tab='" + $tab.attr('id') + "']").show();
-			e.stopPropagation();
+	$('#help').hide();
+	var stageTransition = new $TweenCSS('#stage')
+		.push('width', $('#stage').get(0).width, 800, 'px', true)
+		.push('margin-top', 0, -200, 'px', true)
+		.push('opacity', 1, 0.1);
+	var helpTransition = new $TweenCSS('#help')
+		.push('padding-top', 100, 0, 'px', true)  
+		.push('opacity', 0, 1);  
+	var titleTransition = new $TweenCSS('#title')
+		.push('opacity', 1, 0)
+		.push('top', 0, -50, 'px', true);
+	var transisions = [stageTransition, helpTransition, titleTransition];
+	transisions.play = function(reverse) {
+		this.forEach(function(t) {
+			t.play(reverse ? 0 : 1, 1000, createjs.Ease.cubicInOut);
 		});
-	});	
+	}
+	$('#helpbtn').click(function(){ transisions.play(); });
+	$('#closebtn').click(function(){ transisions.play(true); });
 });
 
 // Application 

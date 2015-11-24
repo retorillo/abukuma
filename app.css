@@ -8,6 +8,15 @@ h1,h2,p {
 	font-weight: normal;
 	font-family: 'Segoe UI', 'Hiragino Kaku Gothic Pro', Meiryo;
 }
+h1.apptitle {
+	font-size: 20px;
+	left: -1em;
+	cursor: pointer;
+}
+h1.apptitle:hover {
+	color: #2ef;
+}
+
 h1 {
 	font-size: 50px;
 }
@@ -18,24 +27,24 @@ p, li {
 	font-size: 15px;
 	color: #eee;
 }
-
-.tabs {
+.fixed {
+	width:100%;
 	position: fixed;
+	z-Index: 0;
 }
-.tabs li {
-	color: #fff;
+.flyout { 
+	width:100%;
+	position: absolute;
+	z-Index: 1;
+	background: transparent;
 }
-.tabpage {
-}
-
 body {
 	background: rgb(20,20,20);		
 }
 audio {
 	display: none;
 }
-.tabpage {
-	margin-top: 2em;
+.page-center {
 	display:block;
 	max-width: 500px;
 	margin-left:auto;
@@ -43,6 +52,7 @@ audio {
 }
 a { color: rgb(40, 150, 255); }
 canvas {
+	margin-top: 2em;
 	display: block;
 	margin-left: auto;
 	margin-right: auto;

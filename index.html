@@ -13,24 +13,24 @@
         <script type="text/javascript" src="canvasicon.js"></script>
         <script type="text/javascript" src="abukuma.js"></script>
         <script type="text/javascript" src="kancolle.wiki.js"></script>
+	<script type="text/javascript" src="tweencss.js"></script>
         <script type="text/javascript" src="app.js"></script>
         <link rel="stylesheet" href="app.css" />
 </head>
 <body>
-	<script type="text/javascript">
-	</script>
-
-	<ul class="tabs">
-		<li id="app">スタート</li>
-		<li id="about">使い方</li>
-	</ul>
-
-	<div class="tabpage" data-tab="app">
+	<div id="app" class="fixed">
 		<canvas id="stage" width="500" height="500"></canvas>
+		<input type="file" id="audio_selector" />
 	</div>
-	<div class="tabpage" data-tab="about">
-		<div class="information">
-			<h1>Abukuma Beta 2</h1>
+	<div id='title' class="flyout">
+		<div class="page-center">
+			<h1 class="apptitle" id="helpbtn">Abukuma</h1>
+		</div>
+	</div>
+	<div id="help" class="flyout">
+		<div class="page-center">
+			<p id="closebtn">閉じる</p>
+			<h1>Abukuma Beta 3</h1>
 			<p>
 				ブラウザだけで動作する艦これ遠征用のタイマーアプリです。
 				艦これの遠征に特化していて、イベント期間中の資材集め、
@@ -71,8 +71,8 @@
 			<p>
 				動作しない場合・不具合、その他ご希望点などありましたら、ぜひお気軽に以下までご相談ください。
 				<ul>
-				<li><a href="https://twitter.com/retorillo" target="_new">Twitter</a></li>
-				<li><a target="_blank" href="https://github.com/retorillo/abukuma/">GitHub</a></li>
+				<li><a href="https://twitter.com/retorillo" target="_blank">Twitter</a></li>
+				<li><a href="https://github.com/retorillo/abukuma/" target="_blank">GitHub</a></li>
 				</ul>
 			</p>
 		
@@ -82,14 +82,14 @@
 				以下のライブラリをそれぞれのライセンスに基づいて使用しています。
 			</p>
 			<ul>
-				<li><a href="https://github.com/jquery/">jQuery - MITライセンス</a></li>
-				<li><a href="https://github.com/CreateJS/">CreateJS - MITライセンス</a></li>
-				<li><a href="https://github.com/moment/">Moment.js - MITライセンス</a></li>
-				<li><a href="https://github.com/necolas/normalize.css">Normalize.css - MITライセンス</a>
+				<li><a href="https://github.com/jquery/" target="_blank">jQuery - MITライセンス</a></li>
+				<li><a href="https://github.com/CreateJS/" target="_blank">CreateJS - MITライセンス</a></li>
+				<li><a href="https://github.com/moment/" target="_blank">Moment.js - MITライセンス</a></li>
+				<li><a href="https://github.com/necolas/normalize.css" target="_blank">Normalize.css - MITライセンス</a>
 			</ul>
+			
 		</div>
-	</div>
 
-        <input type="file" id="audio_selector" />
+	</div>
 </body>
 </html>
