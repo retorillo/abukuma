@@ -1,12 +1,12 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
 <head>
+	<meta charset="utf-8" />
         <title>Abukuma</title>
         <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
         <script type="text/javascript" src="https://code.createjs.com/createjs-2015.05.21.min.js"></script>
         <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.10.6/moment.min.js"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/3.0.3/normalize.min.css" />
-        <link rel="stylesheet" href="abukuma.css" />
         <script type="text/javascript" src="classdef.js"></script>
 	<script type="text/javascript" src="iro.color.min.js"></script>
         <script type="text/javascript" src="keyvaluestore.min.js"></script>
@@ -14,40 +14,80 @@
         <script type="text/javascript" src="abukuma.js"></script>
         <script type="text/javascript" src="kancolle.wiki.js"></script>
         <script type="text/javascript" src="app.js"></script>
+        <link rel="stylesheet" href="app.css" />
 </head>
 <body>
-        <canvas id="stage" width="500" height="500"></canvas>
+	<script type="text/javascript">
+	</script>
 
-	<div class="information">
-		<p>
-			艦これ遠征用のタイマーアプリです。
-			スピーカーボタンでmp3などの音源登録、ドーナツ状のタイマーをクリックして、
-			遠征を選んで、タイマーを開始できます。
-			<b>これらの設定はブラウザを閉じても記憶されています</b>
-		</p>
-		<p>
-			音源はブラウザに保存されます。アップロードなどはされませんので安心してください。
-			一般的な楽曲のサイズ（20MB前後）のMP3が再生・保存できることは確認していますが、
-			あまり大きなデーターのものは再生時に少しカクつくかもしれません。（改善したいです）
-			ファイル形式によってはうまく再生できなかったり、
-			また、大きなデーターなどはうまくブラウザに保存できない場合があるかもしれません。
-			Windowsであれば「C:\Windows\Media」にデフォルトのアラーム音などがあるので選択できます。
-		</p>
-		<p>
-			ブラウザアプリなので、<b>ブラウザを閉じたり、OS自体がスリープ状態のときは、
-			アラームは鳴りません</b>ので注意してください。
-			デイリーの遠征用や、かじりつきプレイ用にオススメです。
-		</p>
-		<p>
-			<b>Microsoft Edge、Firefoxの最新版で動作確認しています。</b>旧バージョンのInternet Exploerでは動作しない場合があります。
-			<b>Chromeではアラーム音がうまく再生できないという不具合を確認しています。将来的なバージョンで修正したいです</b>
-		</p>
-		<p>
-			<b>動作しない場合・不具合などありましたら、ぜひお気軽に
-			<a href="https://twitter.com/retorillo" target="_new">Twitter</a>か
-			<a target="_blank" href="https://github.com/retorillo/abukuma/">GitHub</a>までお問い合わせください。</b>
-		</p>
-		<p>Abukuma Beta2 &copy 2015 Retorillo</p>
+	<ul class="tabs">
+		<li id="app">スタート</li>
+		<li id="about">使い方</li>
+	</ul>
+
+	<div class="tabpage" data-tab="app">
+		<canvas id="stage" width="500" height="500"></canvas>
+	</div>
+	<div class="tabpage" data-tab="about">
+		<div class="information">
+			<h1>Abukuma Beta 2</h1>
+			<p>
+				ブラウザだけで動作する艦これ遠征用のタイマーアプリです。
+				艦これの遠征に特化していて、イベント期間中の資材集め、
+				デイリー・ウィークリーの遠征任務などにオススメです。
+			</p>
+			<h2>基本的な使い方</h2>
+			<p>
+				スピーカーボタンでmp3やwavなどの音源登録、ドーナツ状のタイマーをクリックして、
+				遠征を選んで、タイマーを開始できます。
+				これらの設定はブラウザを閉じても記憶されています。
+			</p>
+			<h2>アラーム音について</h2>
+			<p>
+				音源はブラウザに保存されます。アップロードなどはされませんので安心してください。
+				一般的なサイズの楽曲MP3が再生・保存できることは確認していますが、
+				あまり大きなデーターのものは再生時に少しカクつくかもしれません。
+				今後改善したいです。
+			</p>
+			<p>
+				ファイル形式やサイズによってはうまく再生できなかったり、
+				うまくブラウザに保存できない場合があるかもしれません。
+				新しい音源登録後はテストボタンを押してうまく再生できるか確認してください。
+			</p>
+			<p>
+				Windowsであれば「C:\Windows\Media」にデフォルトのアラーム音などがあるので選択できます。
+			</p>
+			<p>
+				ブラウザアプリなので、ブラウザを閉じたり、OS自体がスリープ状態のときは、
+				アラームは鳴りませんので注意してください。
+			</p>
+			<h2>動作環境</h2>
+			<p>
+				Internet Explorer, Microsoft Edge, Firefoxの最新版で動作確認しています。
+				FirefoxであればWindows, Linux(Ubuntuなど), MacのいずれのPCでも動作するはずです。
+				現在、Chromeではアラーム音がうまく再生できないという不具合を確認しています。
+			</p>
+			<h2>お問い合わせ</h2>
+			<p>
+				動作しない場合・不具合、その他ご希望点などありましたら、ぜひお気軽に以下までご相談ください。
+				<ul>
+				<li><a href="https://twitter.com/retorillo" target="_new">Twitter</a></li>
+				<li><a target="_blank" href="https://github.com/retorillo/abukuma/">GitHub</a></li>
+				</ul>
+			</p>
+		
+
+			<h2>ライセンス情報</h2>
+			<p>
+				以下のライブラリをそれぞれのライセンスに基づいて使用しています。
+			</p>
+			<ul>
+				<li><a href="https://github.com/jquery/">jQuery - MITライセンス</a></li>
+				<li><a href="https://github.com/CreateJS/">CreateJS - MITライセンス</a></li>
+				<li><a href="https://github.com/moment/">Moment.js - MITライセンス</a></li>
+				<li><a href="https://github.com/necolas/normalize.css">Normalize.css - MITライセンス</a>
+			</ul>
+		</div>
 	</div>
 
         <input type="file" id="audio_selector" />

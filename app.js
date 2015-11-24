@@ -1,5 +1,18 @@
-var store = new KeyValueStore('n1kz52w0mhf4');
+// Tab
+$(function(){
+	$(".tabpage").hide();
+	$(".tabs li").each(function(){
+		var $tab = $(this);
+		$tab.click(function(e){
+			$(".tabpage").hide();
+			$(".tabpage[data-tab='" + $tab.attr('id') + "']").show();
+			e.stopPropagation();
+		});
+	});	
+});
 
+// Application 
+var store = new KeyValueStore('n1kz52w0mhf4');
 //https://developer.mozilla.org/en-US/docs/Web/Events/beforeunload
 // TODO: Is only warn if timer active?
 leaveMessage = "ブラウザを閉じたり、このページから移動したりするとアラーム音は鳴りませんがよろしいでしょうか。なお、ブラウザを閉じても設定した時間は維持されるため、このページを再び開けば自動的にタイマーが再開します。";
