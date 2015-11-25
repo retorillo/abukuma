@@ -1128,13 +1128,14 @@ var Speaker = __class(function () {
 			 .forEach(function(i){
 				i.dp.draw = function (ctx, ic) {
 					if (this.base_draw(ctx,ic)) return true; 
-					var style = {
-						body_c: i.color,
-						wave_c: [i.color, i.color, i.color],
-						mute_c: i.color,
-					}
-					canvasicon.drawSpeaker(ctx, 0, 0,
-						_self.width, _self.height, _self.volume, style);
+					canvasicon.drawSpeaker(ctx, { 
+						width:      _self.width, 
+						height:     _self.height,
+						volume:     _self.volume,
+						bodyColor:  i.color,
+						waveColors: [i.color, i.color, i.color],
+						crossColor: i.color,
+					});
 					return true;
 				}
 				i.dp.cache(0, 0, _self.width, _self.height);
