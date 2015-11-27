@@ -38,6 +38,18 @@ p, li {
 	z-Index: 1;
 	background: transparent;
 }
+.fixedflyout { 
+	width:100%;
+	position: fixed;
+	z-Index: 1;
+}
+
+#closebtn {
+	display:block;
+	margin-top: 1em;
+	margin-left: auto;
+	margin-right: 1em;
+}
 body {
 	background: rgb(20,20,20);		
 }
@@ -51,7 +63,7 @@ audio {
 	margin-right:auto;
 }
 a { color: rgb(40, 150, 255); }
-canvas {
+#stage {
 	margin-top: 2em;
 	display: block;
 	margin-left: auto;

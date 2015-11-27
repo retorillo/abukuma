@@ -1,6 +1,6 @@
 // Tab
 $(function(){
-	$('#help').hide();
+	$('#help, #close').hide();
 	var stageTransition = new $TweenCSS('#stage')
 		.push('width', $('#stage').get(0).width, 800, 'px', true)
 		.push('margin-top', 0, -200, 'px', true)
@@ -11,7 +11,10 @@ $(function(){
 	var titleTransition = new $TweenCSS('#title')
 		.push('opacity', 1, 0)
 		.push('top', 0, -50, 'px', true);
-	var transisions = [stageTransition, helpTransition, titleTransition];
+	var closeTransition = new $TweenCSS('#close')
+		.push('opacity', 0, 1)
+		.push('top', -50, 0, 'px', true);
+	var transisions = [stageTransition, helpTransition, titleTransition, closeTransition];
 	transisions.play = function(reverse) {
 		this.forEach(function(t) {
 			t.play(reverse ? 0 : 1, 1000, createjs.Ease.cubicInOut);
@@ -19,7 +22,11 @@ $(function(){
 	}
 	$('#helpbtn').click(function(){ transisions.play(); });
 	$('#closebtn').click(function(){ transisions.play(true); });
+	var ctx = $('#closebtn').get(0).getContext('2d');
+	canvasicon.drawClose(ctx, { width: 50, height: 50, color: 'white' });
 });
+
+
 
 // Application 
 var store = new KeyValueStore('n1kz52w0mhf4');
@@ -216,7 +223,7 @@ function appstart() {
 	
 	circles.layout();
 	circles.x = (stage.canvas.width - circles.width) / 2;
-	circles.y = (stage.canvas.height - circles.height) / 2 - speaker.height / 2;
+	circles.y = (stage.canvas.height - circles.height) / 2; // - speaker.height / 2;
 	
 	createjs.Ticker.addEventListener("tick", function (event) {
 		audioModal.update();
