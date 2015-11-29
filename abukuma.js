@@ -90,7 +90,7 @@ var MouseAwareContainer = __class(function () {
 var OperationSelector = __class(function() {
 	var _self = this;
 	var _width = 0, _height = 0;
-	var _item_width = 245, _item_height = 40;
+	var _item_width = 250, _item_height = 40;
 	var _cellspacing = 1;
 	var _max_rows = 13;
 	var _itemclick = function (op, index) { }
@@ -101,7 +101,7 @@ var OperationSelector = __class(function() {
 		{ prop: 'operations', afterset: _self.invalidate, value: operations },
 		{ prop: 'width',      get: function () { this.update(); return _width;  } },
 		{ prop: 'height',     get: function () { this.update(); return _height; } },
-
+		{ prop: 'selectedOperation', },
 	]);
 	__events(_self, [
 		{ name: 'itemclick' },
@@ -137,6 +137,8 @@ var OperationSelector = __class(function() {
 			_self.shape.graphics.c().f(_self.background || "black").rect(0, 0, _width, _height);
 		}
 		_self.children.forEach(function (child) {
+			if (child.operation)
+				child.selected = child.operation === _self.selectedOperation;
 			if (child.update)
 				child.update();
 		});
@@ -147,27 +149,35 @@ var OperationButton = __class(function () {
 	var _self = this;
 	var _invalidated = true;
 	var _strongColor, _weakColor, _strongColor_hovered, _weakColor_hovered;
+	var _bucketColor;
 	_self.invalidate = function () { _invalidated = true; }
 	__props(_self, [
 		{ prop: 'width',     afterset: _self.invalidate },
 		{ prop: 'height',    afterset: _self.invalidate },
 		{ prop: 'operation', afterset: _self.invalidate },
+		{ prop: 'selected',  value: false },
 	]);
 	_self.init = function () {
+		_self.bucket = new createjs.DisplayObject();
+		_self.bucket_hovered = new createjs.DisplayObject();
 		_self.shape = new createjs.Shape();
 		_self.shape_hovered = new createjs.Shape();
 		_self.text_id = new createjs.Text();
 		_self.text_name = new createjs.Text();
 		_self.text_desc = new createjs.Text();
 		_self.shape_ship = new createjs.Shape();
+		_self.selectedShape = new createjs.DisplayObject();
 		_self.shape_ship_hovered = new createjs.Shape();
 		_self.hitArea = _self.shape;
 		_self.addChild(_self.shape);
 		_self.addChild(_self.shape_hovered);
+		_self.addChild(_self.bucket);
+		_self.addChild(_self.bucket_hovered);
 		_self.addChild(_self.text_id);
 		_self.addChild(_self.text_name);
 		_self.addChild(_self.text_desc);
 		_self.addChild(_self.shape_ship);
+		_self.addChild(_self.selectedShape);
 		_self.update();
 	}
 
@@ -180,6 +190,8 @@ var OperationButton = __class(function () {
 			_strongColor = new iro.Color(_weakColor).o('s', 10).o('l', -45).css();
 			_strongColor_hovered = fluoresce(_strongColor, 1.5);
 			_weakColor_hovered = fluoresce(_weakColor, 1.5);
+			_bucketColor = new iro.Color(_weakColor).o('h', -180).o('s', -20).o('l', -30).css();
+			_bucketColor_hovered = new iro.Color(_weakColor_hovered).o('h', -180).o('s', -20).o('l', -30).css();
 
 			// straight constant
 			var id_fontsize_rate = 0.6; // vs _self.height
@@ -199,7 +211,7 @@ var OperationButton = __class(function () {
 			var name_fontsize = Math.round(name_fontsize_rate * _self.height);
 			var name_padleft = Math.round(name_padleft_rate * name_fontsize);
 			var desc_fontsize = Math.round(desc_fontsize_rate * _self.height);
-
+			
 			_self.text_id.x = id_region.w / 2 + id_region.x;
 			_self.text_id.y = id_region.h / 2 + id_region.y;
 			_self.text_id.textAlign = "center";
@@ -226,6 +238,24 @@ var OperationButton = __class(function () {
 			_self.text_desc.textBaseline = "middle";
 			_self.text_desc.text = desc.join(" ");
 			_self.text_desc.font = desc_fontsize + "px Meiryo UI";
+
+			var bucketh = _self.text_desc.getMeasuredHeight();
+			var bucketMarginRate = 0.1;
+			_self.bucket_hovered.draw = _self.bucket.draw = function(ctx) {
+				if (!_self.operation || !_self.operation.bucket) return;
+				for (var c = 0, x = 0; c < _self.operation.bucket; c++, x+= bucketh) {
+					x += bucketMarginRate * bucketh; 
+					canvasicon.drawBucket(ctx, { x: x, width: bucketh, height: bucketh, 
+						color: this.color, paddingRate: 0.1, } );
+				}
+			}
+			_self.bucket.color = _bucketColor;
+			_self.bucket_hovered.color = _bucketColor_hovered
+			_self.bucket.cache();
+			_self.bucket_hovered.cache();
+			_self.bucket_hovered.x = _self.bucket.x += _self.text_desc.x + _self.text_desc.getMeasuredWidth();
+			_self.bucket_hovered.y = _self.bucket.y += _self.text_desc.y - bucketh / 2;
+
 
 			// shape (background)
 			[{ shape: _self.shape,         strong: _strongColor,         weak: _weakColor         },
@@ -259,12 +289,40 @@ var OperationButton = __class(function () {
 				}
 				i.shape.cache(0, 0, ships_region.w, ships_region.h);
 			 });
+
+			var selectedShapeMarginRate = 0.05;
+			var selectedShapeMargin = selectedShapeMarginRate * id_region.w;
+
+			_self.selectedShape.draw = function(ctx) {
+				ctx.lineWidth = 1;
+				ctx.strokeStyle = this.color;
+				ctx.beginPath();
+				ctx.moveTo(0, 0);
+				ctx.lineTo(id_region.w - selectedShapeMargin * 2, 0);
+				ctx.lineTo(id_region.w - selectedShapeMargin * 2, id_region.h - selectedShapeMargin * 2);
+				ctx.lineTo(0, id_region.h - selectedShapeMargin * 2);
+				ctx.lineTo(0, 0);
+				ctx.stroke();
+				ctx.closePath();
+			}
+			_self.selectedShape.x = id_region.x + selectedShapeMargin;
+			_self.selectedShape.y = id_region.y + selectedShapeMargin;
+			_self.selectedShape.color = _weakColor;
+			_self.selectedShape.cache();
+		}
+		if (_self.selected) {
+			_self.selectedShape.alpha = 1;
+		}
+		else {
+			_self.selectedShape.alpha = 0;
 		}
 
 		if (_self.hover && _self.pressed){
 			_self.text_id.color   = _weakColor_hovered;
 			_self.text_name.color = _strongColor_hovered;
 			_self.text_desc.color = _strongColor_hovered;
+			this.bucket_hovered.alpha     = 0.5;
+			this.bucket.alpha             = 0.5;
 			this.shape_hovered.alpha      = 0.5;
 			this.shape_ship_hovered.alpha = 0.5;
 		}
@@ -272,6 +330,8 @@ var OperationButton = __class(function () {
 			_self.text_id.color   = _weakColor_hovered;
 			_self.text_name.color = _strongColor_hovered;
 			_self.text_desc.color = _strongColor_hovered;
+			this.bucket_hovered.alpha     = 1.0;
+			this.bucket.alpha             = 0;
 			this.shape_hovered.alpha      = 1.0;
 			this.shape_ship_hovered.alpha = 1.0;
 		}
@@ -279,7 +339,9 @@ var OperationButton = __class(function () {
 			_self.text_id.color = _weakColor;
 			_self.text_name.color = _strongColor;
 			_self.text_desc.color = _strongColor;
-			this.shape_hovered.alpha = 0;
+			this.bucket_hovered.alpha     = 0;
+			this.bucket.alpha             = 1;
+			this.shape_hovered.alpha      = 0;
 			this.shape_ship_hovered.alpha = 0;
 		}
 	}
@@ -338,11 +400,8 @@ var ProgressCircle = __class(function () {
 			},
 		},
 		{ prop: 'activity', 
-			get: function () {
-				return _self.text_activity.text;
-			},
-			set: function (value) {
-				_self.text_activity.text = value;
+			afterset: function () {
+				_self.text_activity.text = _self.activity;
 				_self.text_activity.update();
 			},
 		},
@@ -464,7 +523,6 @@ var CountdownCircle = __class(function () {
 	_self.restart = function (activity, duration, startTime) {
 		// duration must be moment.duration
 		// startTime must be moment, nullable
-		console.log(activity);
 		_self.activity = activity;
 		_countdown.reset(duration, startTime);
 	}

@@ -180,6 +180,12 @@ function appstart() {
 	circles = new CountdownCircleSet();
 	circles.itemclick(function(e){
 		selector.target = this;
+		var op;
+		operations.forEach(function(o) {
+			if (op || selector.target.activity != o.name) return;
+			op = o;
+		});
+		selector.selectedOperation = op;
 		selector.show(true);
 	});
 	circles.itemcomplete(function(){

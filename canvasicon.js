@@ -9,9 +9,15 @@ var canvasicon = new function (undefined) {
 		  { name: 'height', value: canvasicon.defaultSize }
 		].forEach(function(i) { setters.push(i); });
 		setters.forEach(function(setter) {
-			obj[setter.name] = obj[setter.name] || setter.value;
+			obj[setter.name] = (obj[setter.name] != undefined) ? obj[setter.name] : setter.value;
 		});
 		return obj;
+	}
+	function deg2rad (deg) { return (deg / 180) * Math.PI }
+	function Arc(cx, cy, r) {
+		var cos = Math.cos, sin = Math.sin;
+		this.cx = cx; this.cy = cy; this.r = r;
+		this.pt = function (deg){ var t = this, r = deg2rad(deg); return { x: cos(r) * t.r + t.cx, y: sin(r) * t.r + t.cy }; }
 	}
 	function Rect(x, y, w, h){
 		this.x = x || 0; this.y = y || 0; this.w = w || 0; this.h = h || 0;
@@ -42,24 +48,28 @@ var canvasicon = new function (undefined) {
 	canvasicon.$ = function (ctx) {
 		var obj = {};
 		obj.ctx = ctx;
-		[ { l: 'beginPath',   s: 'bp' }, 
-		  { l: 'closePath',   s: 'cp' },
-		  { l: 'lineTo',      s: 'lt' },
-		  { l: 'moveTo',      s: 'mt' },
-		  { l: 'fill',        s: 'f'  },
-		  { l: 'rect',        s: 'r'  },
-		  { l: 'arc',         s: 'a'  },
-		  { l: 'stroke',      s: 's'  },
-		  { l: 'fillStyle',   s: 'fs', p: true },
-		  { l: 'strokeStyle', s: 'ss', p: true },
-		  { l: 'lineWidth',   s: 'lw', p: true },
-		  { l: 'lineCap',     s: 'lc', p: true },
+		[ { l: 'beginPath',     s: 'bp'  }, 
+		  { l: 'closePath',     s: 'cp'  },
+		  { l: 'lineTo',        s: 'lt'  },
+		  { l: 'moveTo',        s: 'mt'  },
+		  { l: 'fill',          s: 'f'   },
+		  { l: 'rect',          s: 'r'   },
+		  { l: 'arc',           s: 'a'   },
+		  { l: 'stroke',        s: 's'   },
+		  { l: 'bezierCurveTo', s: 'bct' },
+		  { l: 'fillStyle',     s: 'fs', p: true },
+		  { l: 'strokeStyle',   s: 'ss', p: true },
+		  { l: 'lineWidth',     s: 'lw', p: true },
+		  { l: 'lineCap',       s: 'lc', p: true },
 		].forEach(function(d) {
 			obj[d.s] = d.p ? function() { this.ctx[d.l] = arguments[0]; return obj; }
 				       : function() { this.ctx[d.l].apply(this.ctx, arguments); return obj; }
 			obj[d.l] = obj[d.s];
 		});
-		function deg2rad (deg) { return (deg / 180) * Math.PI }
+		obj.ellipse = function(x, y, w, h) {
+			var r = x + w, b = y + h, cx = x + w / 2, cy = y + h / 2;
+			return this.mt(x, cy).bct(x, y, r, y, r, cy).bct(r, b, x, b, x, cy);
+		}
 		obj.arcd = function(cx, cy, r, d1, d2) { this.arc(cx, cy, r, deg2rad(d1), deg2rad(d2)); return this; }
 		// WARNING: polygon method is experimental
 		obj.polygon = function (toolHandler) {
@@ -83,13 +93,12 @@ var canvasicon = new function (undefined) {
 	}
 	canvasicon.defaultSize = 50;
 	canvasicon.primaryColor = '#000';
-	canvasicon.dangerColor  = '#b02';
 	canvasicon.drawSpeaker = function (ctx, style) {
 		style = initprops(style, [
 			{ name: 'volume',             value: 1 },
 			{ name: 'bodyColor',          value: canvasicon.primaryColor },
 			{ name: 'waveColors',         value: [canvasicon.primaryColor, canvasicon.primaryColor, canvasicon.primaryColor] },
-			{ name: 'crossColor',         value: canvasicon.dangerColor },
+			{ name: 'crossColor',         value: canvasicon.primaryColor },
 			{ name: 'paddingRate',        value: 0.1  },
 			{ name: 'coneWidthRate',      value: 0.20 },
 			{ name: 'coneHeightRate',     value: 0.70 },
@@ -189,5 +198,69 @@ var canvasicon = new function (undefined) {
 			.f().s().cp().fs(style.toggleColor).bp()
 			.arcd(cells[1].x + cells[1].w * style.switch, cells[1].cy, cells[0].w - t, 0, 360)
 			.f().cp();
+	}
+	canvasicon.drawLock = function (ctx, style) {
+		style = initprops(style, [
+			{ name: 'color',               value: canvasicon.primaryColor },
+			{ name: 'unlocked',            value: false },
+			{ name: 'bodyAspect',          value: [1.2, 1] },
+			{ name: 'paddingRate',         value: 0.2 },
+			{ name: 'roundedHeightRate',   value: 0.20 },
+			{ name: 'straightHeightRate',  value: 0.25 },
+			{ name: 'thicknessRate',       value: 0.08 },
+			{ name: 'holeSizeRate',        value: 0.3 },
+			{ name: 'slitDegree',          value: 50 },
+			{ name: 'slitHeightRate',      value: 0.15 },
+		]);
+		var squarew = Math.min(style.width, style.height);
+		var bounds = new Rect(style.x, style.y, style.width, style.height);
+		var p = style.paddingRate * squarew;
+		bounds.resize(squarew, squarew).inflate(-p, -p);
+		var cells = bounds.split(style.roundedHeightRate, style.straightHeightRate , '*');
+		var t = style.thicknessRate * squarew;
+		var rr = cells[0].h - t / 2;	
+		var rcell = cells[0].resize(rr * 2, rr);
+		var hs = style.holeSizeRate * cells[2].h;
+		var sh = style.slitHeightRate * cells[2].h;
+		var hole = new Arc(cells[2].cx, cells[2].cy, hs / 2);
+		var holes = 90 + style.slitDegree / 2;
+		var holee = 90 - style.slitDegree / 2;
+		var sp1 = hole.pt(holes); var sp2 = hole.pt(holee);
+		var scell = new Rect(sp1.x, sp1.y, Math.abs(sp2.x - sp1.x), sh);
+		var bcell = cells[2].resize(cells[2].h * (style.bodyAspect[0] / style.bodyAspect[1]), cells[2].h);
+		canvasicon.$(ctx).lw(t).ss(style.color).fs(style.color).bp()
+			.mt(rcell.x, cells[1].b).lt(rcell.x, cells[1].y)
+			.arcd(rcell.cx, cells[1].y, rcell.h, 180, 360)
+			.lt(rcell.r, style.unlocked ? cells[1].cy : cells[1].b).s().cp().bp()
+			.arcd(hole.cx, hole.cy, hole.r, holes, holee)
+			.lt(scell.r, scell.b).lt(scell.x, scell.b).lt(scell.x, scell.y)
+			.mt(bcell.x, bcell.y).lt(bcell.x, bcell.b).lt(bcell.r, bcell.b)
+			.lt(bcell.r, bcell.y).lt(bcell.x, bcell.y).f('evenodd').cp();
+	}
+	canvasicon.drawBucket = function (ctx, style) {
+		style = initprops(style, [
+			{ name: 'color',               value: canvasicon.primaryColor },
+			{ name: 'handleHeightRate',    value: 0.4 },
+			{ name: 'internalWidthRate',   value: 0.7 },
+			{ name: 'surfaceHeightRate',   value: 0.5 },
+			{ name: 'paddingRate',         value: 0.15 },
+			{ name: 'topWidthRate',        value: 0.8 },
+			{ name: 'bottomWidthRate',     value: 0.7 },
+		]);
+		var squarew = Math.min(style.width, style.height);
+		var bounds = new Rect(style.x, style.y, style.width, style.height);
+		var p = style.paddingRate * squarew;
+		bounds.inflate(-p, -p);
+		var cells = bounds.split(style.surfaceHeightRate, '*', style.surfaceHeightRate);
+		var tcell = cells[0].resize(cells[0].w * style.topWidthRate, cells[0].h);
+		var ip = tcell.w * (1 - style.internalWidthRate);
+		var icell = tcell.clone().inflate(-ip, -ip);
+		var mcell = cells[1];
+		var bcell = cells[2].resize(cells[2].w * style.bottomWidthRate, cells[2].h);
+		canvasicon.$(ctx).fs(style.color).bp()
+			.ellipse(icell.x, icell.y, icell.w, icell.h)
+			.mt(tcell.x, tcell.cy).bct(tcell.x, tcell.y, tcell.r, tcell.y, tcell.r, tcell.cy)
+			.lt(bcell.r, bcell.cy).bct(bcell.r, bcell.b, bcell.x, bcell.b, bcell.x, bcell.cy)
+			.lt(tcell.x, tcell.cy) .f('evenodd').cp();
 	}
 };

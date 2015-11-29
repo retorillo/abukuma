@@ -16,40 +16,46 @@ areas.south = { color: "rgb(200, 250, 0)", name: "南方海域" };
 var operations = [];
 new function () {
 	// ARA
-	setara( 99, areas.debug, "拾秒動作試験");
+	//setara( 99, areas.debug, "拾秒動作試験");
 	setara(  2, areas.home,  "長距離練習航海");
 	setara(  3, areas.home,  "警備任務");
+	setara(  4, areas.home,  "対潜警戒任務");
 	setara(  5, areas.home,  "海上護衛任務");
 	setara(  6, areas.home,  "防空射撃演習");
 	setara(  9, areas.seast, "タンカー護衛任務");
 	setara( 11, areas.seast, "ボーキサイト輸送任務");
+	setara( 13, areas.seast, "鼠輸送作戦");
 	setara( 21, areas.north, "北方鼠輸送作戦");
 	setara( 37, areas.south, "東京急行");
 	setara( 38, areas.south, "東京急行 弐");
 
-	// RES      dur | ful | amo | stl | bax
-	setres( 99,  1/6,  999,  999,  999,    0);
-	setres(  2,   30,    0,  100,   30,    0);
-	setres(  3,   20,   30,   30,   40,    0);
-	setres(  5,   90,  200,  200,   20,   20);
-	setres(  6,   40,    0,    0,    0,   80);
-	setres(  9,  240,  350,    0,    0,    0);
-	setres( 11,  300,    0,    0,    0,  250);
-	setres( 21,  140,  320,  270,    0,    0);
-	setres( 37,  165,    0,  380,  270,    0);
-	setres( 38,  175,  420,    0,  200,    0);
+	// RES      dur | ful | amo | stl | bax | bucket
+	//setres( 99,  1/6,  999,  999,  999,    0,  0);
+	setres(  2,   30,    0,  100,   30,    0,  1);
+	setres(  3,   20,   30,   30,   40,    0,  0);
+	setres(  4,   50,    0,   60,    0,    0,  1);
+	setres(  5,   90,  200,  200,   20,   20,  0);
+	setres(  6,   40,    0,    0,    0,   80,  0);
+	setres(  9,  240,  350,    0,    0,    0,  2);
+	setres( 11,  300,    0,    0,    0,  250,  1);
+	setres( 13,  240,  240,  300,    0,    0,  2);
+	setres( 21,  140,  320,  270,    0,    0,  0);
+	setres( 37,  165,    0,  380,  270,    0,  0);
+	setres( 38,  175,  420,    0,  200,    0,  0);
 
-	// REQ     -------------------|--|-------------------|--
+	// REQ     -------------------|--|-------------------|--|-------------------|--|
 	setreq(  2, ships.unspecified,  4)
 	setreq(  3, ships.unspecified,  3)
-	setreq(  5, ships.lightCruiser, 1, ships.destroyer,   2)
+	setreq(  4, ships.lightCruiser, 1, ships.destroyer,    2)
+	setreq(  5, ships.lightCruiser, 1, ships.destroyer,    2, ships.unspecified,  1)
 	setreq(  6, ships.unspecified,  4)
-	setreq(  9, ships.lightCruiser, 1, ships.destroyer,   2)
-	setreq( 11, ships.destroyer,    2, ships.unspecified, 2)
-	setreq( 21, ships.lightCruiser, 1, ships.destroyer,   4)
-	setreq( 37, ships.lightCruiser, 1, ships.destroyer,   5)
+	setreq(  9, ships.lightCruiser, 1, ships.destroyer,    2, ships.unspecified,  1)
+	setreq( 11, ships.destroyer,    2, ships.unspecified,  2)
+	setreq( 13, ships.lightCruiser, 1, ships.destroyer,    4, ships.unspecified,  1)
+	setreq( 21, ships.lightCruiser, 1, ships.destroyer,    4)
+	setreq( 37, ships.lightCruiser, 1, ships.destroyer,    5)
 	setreq( 38, ships.destroyer,    6)
-	setreq( 99, ships.unspecified,  6)
+	//setreq( 99, ships.unspecified,  6)
 
 	function setara(id, area, name){
 		operations[id] = operations[id] || {};
@@ -70,12 +76,13 @@ new function () {
 		}
 	}
 
-	function setres(id, duration, fuel, ammo, steel, baux){
+	function setres(id, duration, fuel, ammo, steel, baux, bucket){
 		operations[id] = operations[id] || {};
 		operations[id].duration = duration;
 		operations[id].fuel = fuel;
 		operations[id].ammo = ammo;
 		operations[id].steel = steel;
 		operations[id].baux = baux;
+		operations[id].bucket = bucket;
 	}
 }
