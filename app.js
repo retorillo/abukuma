@@ -1,5 +1,34 @@
-var store = new KeyValueStore('n1kz52w0mhf4');
+$(function(){
+	$('#help, #close').hide();
+	var stageTransition = new $TweenCSS('#stage')
+		.push('width', $('#stage').get(0).width, 800, 'px', true)
+		.push('margin-top', 0, -200, 'px', true)
+		.push('opacity', 1, 0.1);
+	var helpTransition = new $TweenCSS('#help')
+		.push('padding-top', 100, 0, 'px', true)  
+		.push('opacity', 0, 1);  
+	var titleTransition = new $TweenCSS('#title')
+		.push('opacity', 1, 0.1)
+		.push('margin-top', 0, -50, 'px', true);
+	var closeTransition = new $TweenCSS('#close')
+		.push('opacity', 0, 1)
+		.push('top', -50, 0, 'px', true);
+	var transisions = [stageTransition, helpTransition, titleTransition, closeTransition];
+	transisions.play = function(reverse) {
+		this.forEach(function(t) {
+			t.play(reverse ? 0 : 1, 1000, createjs.Ease.cubicInOut);
+		});
+	}
+	$('#helpbtn').click(function(){ transisions.play(); });
+	$('#closebtn').click(function(){ transisions.play(true); });
+	var ctx = $('#closebtn').get(0).getContext('2d');
+	canvasicon.drawClose(ctx, { width: 50, height: 50, color: 'white' });
+});
 
+
+
+// Application 
+var store = new KeyValueStore('n1kz52w0mhf4');
 //https://developer.mozilla.org/en-US/docs/Web/Events/beforeunload
 // TODO: Is only warn if timer active?
 leaveMessage = "ブラウザを閉じたり、このページから移動したりするとアラーム音は鳴りませんがよろしいでしょうか。なお、ブラウザを閉じても設定した時間は維持されるため、このページを再び開けば自動的にタイマーが再開します。";
@@ -150,6 +179,12 @@ function appstart() {
 	circles = new CountdownCircleSet();
 	circles.itemclick(function(e){
 		selector.target = this;
+		var op;
+		operations.forEach(function(o) {
+			if (op || selector.target.activity != o.name) return;
+			op = o;
+		});
+		selector.selectedOperation = op;
 		selector.show(true);
 	});
 	circles.itemcomplete(function(){
