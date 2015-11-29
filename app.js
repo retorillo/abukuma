@@ -1,4 +1,3 @@
-// Tab
 $(function(){
 	$('#help, #close').hide();
 	var stageTransition = new $TweenCSS('#stage')
@@ -9,8 +8,8 @@ $(function(){
 		.push('padding-top', 100, 0, 'px', true)  
 		.push('opacity', 0, 1);  
 	var titleTransition = new $TweenCSS('#title')
-		.push('opacity', 1, 0)
-		.push('top', 0, -50, 'px', true);
+		.push('opacity', 1, 0.1)
+		.push('margin-top', 0, -50, 'px', true);
 	var closeTransition = new $TweenCSS('#close')
 		.push('opacity', 0, 1)
 		.push('top', -50, 0, 'px', true);
@@ -229,7 +228,7 @@ function appstart() {
 	
 	circles.layout();
 	circles.x = (stage.canvas.width - circles.width) / 2;
-	circles.y = (stage.canvas.height - circles.height) / 2; // - speaker.height / 2;
+	circles.y = (stage.canvas.height - circles.height) / 2 - speaker.height / 2;
 	
 	createjs.Ticker.addEventListener("tick", function (event) {
 		audioModal.update();
